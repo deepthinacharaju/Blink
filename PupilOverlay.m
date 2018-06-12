@@ -52,6 +52,24 @@ if counter > 4
     return
 end
 if numel(centers) < 2
+    [allcenters,allradii]=imfindcircles(eye,[200, 300],'ObjectPolarity','dark','Sensitivity',0.9,'EdgeThreshold',0.01,'Method','twostage');
+    counter = 0;
+    centers =[];
+    radii = [];
+ if numel(oldcenter)>0
+    for k = 1:1:size(allcenters,1)
+        if sqrt((allcenters(k,1)-oldcenter(1)).^2 + (allcenters(k,2)-oldcenter(2)).^2) < 100
+            centers = [centers; allcenters(k,1), allcenters(k,2)];
+            radii = [radii; allradii(k)];
+            fprintf('Off Center Omission\n')
+        end
+    end
+ else
+     centers = allcenters;
+     radii = allradii;
+ end
+end
+if numel(centers)<2
     fprintf('No Visible Iris \n')
  
     out = 0;
