@@ -3,8 +3,9 @@
  
 tic
 cd 'C:\Users\dnacharaju\Documents\GitKraken\blink\SampleVideos'
-clip = VideoReader('V0000000006_RAW_Blink11.avi');
-cd 'C:\Users\dnacharaju\Documents\GitKraken\blink\Blink'
+clip = VideoReader('V0000000034_RAW_Blink10.avi');
+ cd  'C:\Users\dnacharaju\Documents\GitKraken\blink\Blink'
+
 Switch = 0;
  
 while hasFrame(clip)
@@ -14,12 +15,11 @@ while hasFrame(clip)
     video = imgaussfilt(video,2);
  
     image(video);
-
+ 
     pause(1/clip.FrameRate);
  
-    [out,centers,radii] = PupilOverlay(video,0);
-    h = viscircles(centers,radii);
-    pause(.5);
+    [out] = PupilOverlay(video,0);
+ 
     if out == 0 && Switch == 0
  
         fprintf('Full Blink \n')

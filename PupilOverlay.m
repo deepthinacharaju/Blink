@@ -1,4 +1,4 @@
-function [out] = PupilOverlay(eye,plot)
+function [out,centers,radii] = PupilOverlay(eye,plot)
  
 out = 1;
  
@@ -26,11 +26,11 @@ end
  
 %tic
  
-[centers,radii]=imfindcircles(eye,[130, 175],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
+[centers,radii]=imfindcircles(eye,[200, 250],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
  
 %toc
  
-if size(radii) == [0 0]
+if numel(centers) ~= 2
  
     fprintf('No Visible Pupil \n')
  
