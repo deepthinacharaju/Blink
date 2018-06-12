@@ -25,14 +25,16 @@ if plot ==1
 end
  
 %tic
-[allcenters,radii]=imfindcircles(eye,[200, 250],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
+[allcenters,allradii]=imfindcircles(eye,[200, 250],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
 %toc
  counter = 0;
  centers =[];
+ radii = [];
  if numel(oldcenter)>0
     for k = 1:1:size(allcenters,1)
         if sqrt((allcenters(k,1)-oldcenter(1)).^2 + (allcenters(k,2)-oldcenter(2)).^2) < 100
             centers = [centers; allcenters(k,1), allcenters(k,2)];
+            radii = [radii; allradii(k)];
         end
     end
  else
