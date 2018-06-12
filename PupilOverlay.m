@@ -40,7 +40,7 @@ if counter > 4
     return
 end
 if numel(centers) < 2
-    fprintf('No Visible Pupil \n')
+    fprintf('No Visible Iris \n')
  
     out = 0;
  

@@ -1,6 +1,5 @@
  
 %% Download video 
- 
 tic
 cd 'C:\Users\dnacharaju\Documents\GitKraken\blink\SampleVideos'
 clip = VideoReader('V0000000006_RAW_Blink12.avi');
