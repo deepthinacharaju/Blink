@@ -1,4 +1,4 @@
-function [out,centers,radii] = PupilOverlay(eye,plot,oldcenter)
+function [out,centers,radii,mask] = PupilOverlay(eye,plot,oldcenter)
  
 out = 1;
  
@@ -6,7 +6,7 @@ out = 1;
  
 eye2=eye;
  
-eye3 = eye2;
+mask = eye2;
  
 if plot ==1
  
@@ -39,6 +39,7 @@ end
     end
  else
      centers = allcenters;
+     radii = allradii;
  end
 while numel(centers) > 2 && counter < 5
  [centers,radii]=imfindcircles(eye,[200, 250],'ObjectPolarity','dark','Sensitivity',0.95-counter*0.01,'EdgeThreshold',0.05,'Method','twostage');
@@ -108,10 +109,9 @@ if plot == 1
  
     figure()
  
-    eye3(eye~=255)=0;
- 
-    imshow(eye3)
- 
+    mask(eye~=255)=0;
+    mask = rgb2gray(mask);
+    imshow(mask)
 end
  
 end

@@ -2,7 +2,7 @@
 %% Download video 
 tic
 cd 'C:\Users\dnacharaju\Documents\GitKraken\blink\SampleVideos'
-clip = VideoReader('V0000000006_RAW_Blink18.avi');
+clip = VideoReader('V0000000006_RAW_Blink6.avi');
 %eye = imread('missedblink2.PNG');
 %figure(1)
 % imshow(eye)
@@ -16,7 +16,7 @@ Switch = 0;
 figure(1)
 oldcenter = [];
 while hasFrame(clip)
- 
+ close all
     video = readFrame(clip);
  
     video = imgaussfilt(video,2);
@@ -25,10 +25,10 @@ while hasFrame(clip)
 
     pause(1/clip.FrameRate);
  
-    [out,centers,radii] = PupilOverlay(video,0,oldcenter);
+    [out,centers,radii] = PupilOverlay(video,1,oldcenter);
     oldcenter = centers;
     h = viscircles(centers,radii);
-    pause(.5);
+    pause
     if out == 0 && Switch == 0
  
         fprintf('Full Blink \n')
