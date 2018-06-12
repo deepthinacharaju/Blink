@@ -2,13 +2,14 @@ clf; clear all;
 
 filepath = 'C:\Users\esimons\Documents\MATLAB\Test'; % change to actual location
 
-GenerateBlinkVideos(filepath); %generates videos for each blink
+%GenerateBlinkVideos(filepath); %generates videos for each blink
 
 fileList = dir([filepath,'\*.avi']);
 
 c = cell(numel(fileList),2);
 Full = 0;
 Partial = 0;
+oldcenter = [];
 
 for fileNo = 1:size(fileList,1);
     if ~strcmp(fileList(fileNo).name(end-6:end),'RAW.avi') %allows original file to be skipped
@@ -23,8 +24,9 @@ for fileNo = 1:size(fileList,1);
             video = readFrame(clip);
             video = imgaussfilt(video,2);
             image(video);
-            pause(1/clip.FrameRate);
-            [out] = PupilOverlay(video,0);
+            [out,centers,radii] = PupilOverlay(video,0,oldcenter);
+            oldcenter = centers;
+            h = viscircles(centers,radii);
             
             if out == 0
                 fprintf('Full Blink \n')
