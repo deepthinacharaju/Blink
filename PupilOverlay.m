@@ -29,9 +29,17 @@ end
 [centers,radii]=imfindcircles(eye,[200, 250],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
  
 %toc
- 
-if numel(centers) ~= 2
- 
+ counter = 0;
+while numel(centers) > 2 && counter < 5
+ [centers,radii]=imfindcircles(eye,[200, 250],'ObjectPolarity','dark','Sensitivity',0.95-counter*0.01,'EdgeThreshold',0.05,'Method','twostage');
+counter = counter +1;
+end    
+if counter > 4
+    fprintf('Number of Circles Error')
+    out = 0;
+    return
+end
+if numel(centers) < 2
     fprintf('No Visible Pupil \n')
  
     out = 0;

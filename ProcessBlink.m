@@ -3,10 +3,10 @@
  
 tic
 cd 'C:\Users\dnacharaju\Documents\GitKraken\blink\SampleVideos'
-clip = VideoReader('V0000000006_RAW_Blink11.avi');
+clip = VideoReader('V0000000006_RAW_Blink12.avi');
 cd 'C:\Users\dnacharaju\Documents\GitKraken\blink\Blink'
 Switch = 0;
- 
+figure(1)
 while hasFrame(clip)
  
     video = readFrame(clip);
