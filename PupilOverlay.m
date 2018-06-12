@@ -109,7 +109,6 @@ if plot == 1
     colormap gray
  
     figure()
- 
     mask(eye~=255)=0;
     mask = rgb2gray(mask);
     imshow(mask)
