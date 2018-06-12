@@ -25,7 +25,7 @@ if plot ==1
 end
  
 %tic
-[allcenters,allradii]=imfindcircles(eye,[200, 250],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
+[allcenters,allradii]=imfindcircles(eye,[200, 300],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
 %toc
  counter = 0;
  centers =[];
@@ -35,6 +35,7 @@ end
         if sqrt((allcenters(k,1)-oldcenter(1)).^2 + (allcenters(k,2)-oldcenter(2)).^2) < 100
             centers = [centers; allcenters(k,1), allcenters(k,2)];
             radii = [radii; allradii(k)];
+            fprintf('Off Center Omission\n')
         end
     end
  else
@@ -42,7 +43,7 @@ end
      radii = allradii;
  end
 while numel(centers) > 2 && counter < 5
- [centers,radii]=imfindcircles(eye,[200, 250],'ObjectPolarity','dark','Sensitivity',0.95-counter*0.01,'EdgeThreshold',0.05,'Method','twostage');
+ [centers,radii]=imfindcircles(eye,[200, 300],'ObjectPolarity','dark','Sensitivity',0.95-counter*0.01,'EdgeThreshold',0.05,'Method','twostage');
 counter = counter +1;
 end    
 if counter > 4
