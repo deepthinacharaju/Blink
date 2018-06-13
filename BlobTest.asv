@@ -7,10 +7,11 @@ filepath = 'C:\Users\esimons\Documents\MATLAB\Test'; % change to actual location
 fileList = dir([filepath,'\*.avi']);
 
 c = cell(numel(fileList),2);
-out = 1;
+% Full = 0;
+% Partial = 0;
 oldcenter = [];
 pupilIntensityThreshold = 15;
-irisMovementThreshold = 150;
+pupilMovementThreshold = 50;
 eccentricityThreshold = 1;
 centroidPrev = [0 0];
 irisSizeThreshold = 5000;
@@ -22,10 +23,11 @@ for fileNo = 1:size(fileList,1);
         c{fileNo, 1} = fileList(fileNo).name;
         tic
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
+        Switch = 0;
         fprintf(fileList(fileNo).name)
         fprintf('\n')
         
-        while hasFrame(clip)
+        while hasFrame(clip) && Switch == 0
             irisIsolated = readFrame(clip);
             %set minIntensity to intensity of darkest pixel in frame
             minIntensity = min(irisIsolated(:));
@@ -59,28 +61,21 @@ for fileNo = 1:size(fileList,1);
             %if eccentricity < eccentricityThreshold &  irisArea > irisSizeThreshold
             if irisArea > irisSizeThreshold && irisArea < 500000
                 %check that the iris centroid did not move more than
-                %irisMovementThreshold from its previous location
+                %pupilMovementThreshold from its previous location
                 if centroidPrev ~= [0 0]
                     centroidMovement = (centroid(1) - centroidPrev(1))^2 + (centroid(2) - centroidPrev(2))^2;
-                    %If the pupil has not moved more than irisMovementThreshold
+                    %If the pupil has not moved more than pupilMovementThreshold
                     %from the previous frame, set pupilIsolate to true for the
                     %largest blob
-                    if centroidMovement < irisMovementThreshold^2
+                    if centroidMovement < pupilMovementThreshold^2
                         irisIsolated  = (irisLabeled == irisLabel);
                         centroidPrev = centroid;
-                        out = 1;
-<<<<<<< Updated upstream
-                        %If the pupil has exceeded the movement threshold,
-                        %delete frame
-=======
                         %If the pupil has exceeded the movement threshold, set
                         %pupilIsolated to black.
->>>>>>> Stashed changes
                     else
                         irisIsolated = [];
                         fprintf('Centroid moved too much\n')
-                        out = 0;
-                        continue
+                        out = 0l
                     end
                 else
                     %If the previous centroid value was [0 0] (i.e. has not been
@@ -92,24 +87,16 @@ for fileNo = 1:size(fileList,1);
                 irisIsolated = [];
                 fprintf('Iris not found\n')
                 out = 0;
-                continue
+                return
             end
+            
+%             video = imgaussfilt(video,2);
+%             video = rgb2gray(video);
+%             video = adapthisteq(video,'clipLimit',0.02,'Distribution','rayleigh'); 
 
-            imshow(irisIsolated);
+%            RI = imref2d(size(irisIsolated));
+
+            imshow(irisIsolated);%,RI);
         end
     end
-    
-    if out == 1
-        fprintf('Partial Blink\n')
-        c{fileNo, 2} = 'Partial';
-        toc
-    end
-    if out == 0
-        fprintf('Full Blink\n')
-        c{fileNo, 2} = 'Full';
-        toc
-    end
-end    
-
-T = cell2table(c,'VariableNames',{'File_Name','Partial_or_Full'});
-writetable(T,'Blinks.csv')
+end

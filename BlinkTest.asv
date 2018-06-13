@@ -23,32 +23,31 @@ for fileNo = 1:size(fileList,1);
         while hasFrame(clip) && Switch == 0
             video = readFrame(clip);
             video = imgaussfilt(video,2);
-            video = rgb2gray(video);
+            video =rgb2gray(video);
             video = adapthisteq(video,'clipLimit',0.02,'Distribution','rayleigh'); 
 
-            RI = imref2d(size(video));
-            imshow(video,RI);
+            %imshow(video);
             colormap gray
-            [out,centers,radii,mask] = PupilOverlay(video,1,oldcenter);
+            [out,centers,radii,mask] = PupilOverlay(video,0,oldcenter);
             oldcenter = centers;
-            h = viscircles(centers,radii);
+            %h = viscircles(centers,radii);
             pause(.5);
             if out == 0
                 fprintf('Full Blink \n')
                 Switch = 1;
                 toc
-                %Full = Full + 1;
+                Full = Full + 1;
             end
         end
         
         if Switch == 0
             fprintf('Partial Blink \n')
+            Partial = Partial + 1;
             toc
-            %Partial = Partial + 1;
         end
         
         if Switch == 0
-            c{fileNo, 2} = 'Partial';
+            c{fileNo, 2} = 'Partial'; %full or partial
         else
             c{fileNo, 2} = 'Full';
         end
