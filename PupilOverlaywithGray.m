@@ -3,6 +3,7 @@ out = 1;
 centers = [];
 radii = [];
 counter = 0;
+centerThresh = 200;
 
 eye2 = eye;
 mask = eye2;
@@ -18,6 +19,12 @@ end
 
 [centers,radii]=imfindcircles(eye,[200, 300],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
 
+for k = 1:size(centers(:,1))
+    if centers(k,1) > 832 + centerThresh || centers(k,1) < 832 + centerThresh
+    centers(k,:) = [];
+    end
+end
+ 
 while numel(centers) > 2 && counter < 5
     [centers,radii]=imfindcircles(eye,[200, 300],'ObjectPolarity','dark','Sensitivity',0.95-counter*0.01,'EdgeThreshold',0.05,'Method','twostage');
     counter = counter + 1;

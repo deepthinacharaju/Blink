@@ -10,28 +10,30 @@ c = cell(numel(fileList),2);
 Full = 0;
 Partial = 0;
 oldcenter = [];
-
 for fileNo = 1:size(fileList,1);
     if ~strcmp(fileList(fileNo).name(end-6:end),'RAW.avi') %allows original file to be skipped
         c{fileNo, 1} = fileList(fileNo).name;
-        tic
+        %tic
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
+        video = read(clip,5);
+        video = imgaussfilt(video,2);
+        image(video);
+        %[maxGray,maxGrayFrame] = maxGrayFinder(clip);
         Switch = 0;
         fprintf(fileList(fileNo).name)
         fprintf('\n')
-        
-        while hasFrame(clip) && Switch == 0
-            video = readFrame(clip);
-            video = imgaussfilt(video,2);
-            image(video);
-            [out,centers,radii] = PupilOverlay(video,0,oldcenter);
-            oldcenter = centers;
+        while Switch == 0
+            
+            
+            
+            [out,centers,radii,mask] = PupilOverlay(video,0,oldcenter);
             h = viscircles(centers,radii);
+            oldcenter = centers;
             
             if out == 0
                 fprintf('Full Blink \n')
                 Switch = 1;
-                toc
+                %toc
                 Full = Full + 1;
             end
         end
@@ -39,7 +41,7 @@ for fileNo = 1:size(fileList,1);
         if Switch == 0
             fprintf('Partial Blink \n')
             Partial = Partial + 1;
-            toc
+            %toc
         end
         
         if Switch == 0
@@ -49,6 +51,6 @@ for fileNo = 1:size(fileList,1);
         end
     end
 end
-    
+
 T = cell2table(c,'VariableNames',{'File_Name','Partial_or_Full'});
 writetable(T,'Blinks.csv')

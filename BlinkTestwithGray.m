@@ -9,7 +9,7 @@ fileList = dir([filepath,'\*.avi']);
 c = cell(numel(fileList),2);
 Full = 0;
 Partial = 0;
-oldcenter = [];
+%oldcenter = [];
 for fileNo = 1:size(fileList,1);
     if ~strcmp(fileList(fileNo).name(end-6:end),'RAW.avi') %allows original file to be skipped
         c{fileNo, 1} = fileList(fileNo).name;
