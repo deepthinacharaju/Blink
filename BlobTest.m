@@ -7,7 +7,7 @@ filepath = 'C:\Users\esimons\Documents\MATLAB\Test'; % change to actual location
 fileList = dir([filepath,'\*.avi']);
 
 c = cell(numel(fileList),2);
-out = 1;
+out = [];
 oldcenter = [];
 pupilIntensityThreshold = 15;
 irisMovementThreshold = 150;
@@ -68,25 +68,20 @@ for fileNo = 1:size(fileList,1);
                     if centroidMovement < irisMovementThreshold^2
                         irisIsolated  = (irisLabeled == irisLabel);
                         centroidPrev = centroid;
-                        out = 1;
-<<<<<<< Updated upstream
+                        %out = 1;
                         %If the pupil has exceeded the movement threshold,
                         %delete frame
-=======
-                        %If the pupil has exceeded the movement threshold, set
-                        %pupilIsolated to black.
->>>>>>> Stashed changes
                     else
                         irisIsolated = [];
                         fprintf('Centroid moved too much\n')
-                        out = 0;
-                        continue
+                        %out = 0;
                     end
                 else
                     %If the previous centroid value was [0 0] (i.e. has not been
-                    %established yet), this frame is not counted as a blink frame.
+                    %established yet), then this frame is not a blink frame
                     irisIsolated  = (irisLabeled == irisLabel);
                     centroidPrev = centroid;
+                    %out = 1;
                 end
             else
                 irisIsolated = [];
@@ -96,19 +91,24 @@ for fileNo = 1:size(fileList,1);
             end
 
             imshow(irisIsolated);
+            
+            if isempty(irisIsolated) == 1;
+                out = 0;
+                break
+            else
+                out = 1;
+            end
         end
-    end
-    
-    if out == 1
-        fprintf('Partial Blink\n')
-        c{fileNo, 2} = 'Partial';
-        toc
     end
     if out == 0
         fprintf('Full Blink\n')
         c{fileNo, 2} = 'Full';
         toc
-    end
+    else
+        fprintf('Partial Blink\n')
+        c{fileNo, 2} = 'Partial';
+        toc
+    end 
 end    
 
 T = cell2table(c,'VariableNames',{'File_Name','Partial_or_Full'});
