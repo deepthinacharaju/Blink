@@ -1,6 +1,6 @@
 clf; clear all;
-
-filepath = 'C:\Users\esimons\Documents\MATLAB\Test'; % change to actual location
+close all;
+filepath = 'C:\Users\dnacharaju\Documents\GitKraken\blink\SampleVideos\TestFolder'; % change to actual location
 
 %GenerateBlinkVideos(filepath); %generates videos for each blink
 
@@ -9,7 +9,7 @@ fileList = dir([filepath,'\*.avi']);
 c = cell(numel(fileList),2);
 out = 1;
 oldcenter = [];
-pupilIntensityThreshold = 15;
+pupilIntensityThreshold = 25;
 irisMovementThreshold = 150;
 eccentricityThreshold = 1;
 centroidPrev = [0 0];
@@ -26,7 +26,8 @@ for fileNo = 1:size(fileList,1);
         fprintf('\n')
         
         while hasFrame(clip)
-            irisIsolated = readFrame(clip);
+            eye = readFrame(clip);
+            irisIsolated = eye;
             %set minIntensity to intensity of darkest pixel in frame
             minIntensity = min(irisIsolated(:));
             %set irisIsolated to true for all pixels in frame within
@@ -41,6 +42,8 @@ for fileNo = 1:size(fileList,1);
             irisIsolated = imfill(irisIsolated,'holes');
             %erode twice and dilate irisIsolated
             irisIsolated = imdilate(imerode(imerode(irisIsolated,erodeDilateElement),erodeDilateElement),erodeDilateElement);
+            %fill holes in irisIsolated
+            irisIsolated = imfill(irisIsolated,'holes');
             %set irisLabeled to label all contiguous blobs in pupilIsolated
             irisIsolated = rgb2gray(irisIsolated);
             irisLabeled = bwlabel(irisIsolated);
@@ -69,13 +72,10 @@ for fileNo = 1:size(fileList,1);
                         irisIsolated  = (irisLabeled == irisLabel);
                         centroidPrev = centroid;
                         out = 1;
-<<<<<<< Updated upstream
                         %If the pupil has exceeded the movement threshold,
                         %delete frame
-=======
                         %If the pupil has exceeded the movement threshold, set
                         %pupilIsolated to black.
->>>>>>> Stashed changes
                     else
                         irisIsolated = [];
                         fprintf('Centroid moved too much\n')
@@ -94,8 +94,15 @@ for fileNo = 1:size(fileList,1);
                 out = 0;
                 continue
             end
-
+            subplot(1,3,1)
             imshow(irisIsolated);
+            subplot(1,3,2)
+            imshow(rgb2gray(eye))
+            pause(.5);
+            subplot(1,3,3)
+            fuse = imfuse(rgb2gray(eye),irisIsolated);
+            imshow(fuse)
+            colormap gray
         end
     end
     
