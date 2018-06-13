@@ -1,9 +1,7 @@
 function [out,centers,radii,mask] = PupilOverlay(eye,plot,oldcenter)
- 
 out = 1;
- 
 %eye =rgb2gray(eye);
- 
+%eye = adapthisteq(eye,'clipLimit',0.02,'Distribution','rayleigh'); 
 eye2=eye;
  
 mask = eye2;
@@ -27,6 +25,7 @@ end
 %tic
 [allcenters,allradii]=imfindcircles(eye,[200, 300],'ObjectPolarity','dark','Sensitivity',0.96,'EdgeThreshold',0.05,'Method','twostage');
 %toc
+whos allcenters
  counter = 0;
  centers =[];
  radii = [];
@@ -111,7 +110,7 @@ if plot == 1
     figure()
  
     mask(eye~=255)=0;
-    mask = rgb2gray(mask);
+    %mask = rgb2gray(mask);
     imshow(mask)
 end
  

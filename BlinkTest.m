@@ -1,6 +1,6 @@
 clf; clear all;
 
-filepath = 'C:\Users\esimons\Documents\MATLAB\Test'; % change to actual location
+filepath = 'C:\Users\dnacharaju\Documents\GitKraken\blink\SampleVideos\TestFolder'; % change to actual location
 
 %GenerateBlinkVideos(filepath); %generates videos for each blink
 
@@ -23,11 +23,15 @@ for fileNo = 1:size(fileList,1);
         while hasFrame(clip) && Switch == 0
             video = readFrame(clip);
             video = imgaussfilt(video,2);
-            image(video);
-            [out,centers,radii] = PupilOverlay(video,0,oldcenter);
+            video =rgb2gray(video);
+            video = adapthisteq(video,'clipLimit',0.02,'Distribution','rayleigh'); 
+
+            imshow(video);
+            colormap gray
+            [out,centers,radii,mask] = PupilOverlay(video,0,oldcenter);
             oldcenter = centers;
             h = viscircles(centers,radii);
-            
+            pause(.5);
             if out == 0
                 fprintf('Full Blink \n')
                 Switch = 1;
