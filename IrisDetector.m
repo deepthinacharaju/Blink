@@ -1,4 +1,4 @@
-function [out,irisIsolated,irisArea,centroid,avgPixelx,avgPixely] = IrisDetector(eye)
+function [out,irisIsolated,irisArea,centroid,avgPixelx,avgPixely,pixelList] = IrisDetector(eye)
 out = [1];
 pupilIntensityThreshold = 20;
 irisMovementThreshold = 20;
@@ -22,6 +22,7 @@ counter = 0;
     %add to irisIsolated frame any pixels with intensity higher than
     %specularIntensity
     irisIsolated2 = irisIsolated1 + (eye >= specularIntensity);
+    %irisIsolated2 = imcrop(irisIsolated,[300, 700, 1400, 100]);
     %fprintf('%d\n',sum(irisIsolated2(:)));
 %     while sum(irisIsolated2(:)) < 10000
 %         minIntensity = 10 + counter;
@@ -62,7 +63,14 @@ counter = 0;
         %end
     end
     
-    if irisArea > 20000 && (max(pixelList(1)) < 300 || min(pixelList(1)) > 1300)     %used 300 for vids 4-6
+    if sum(sum(irisIsolated(750:end,:))) > 0 
+        irisIsolated = [];
+        fprintf('Blob too low: [%d,%d]\n',avgPixelx,avgPixely);
+        out = 0;
+        return
+    end
+    
+    if irisArea > 15000 && (max(pixelList(1)) < 425 || min(pixelList(1)) > 1300)     %used 300 for vids 4-6
         irisIsolated = [];
         fprintf('Way too big and far from center: Area: %d   Center: [%d,%d]\n',irisArea,avgPixelx,avgPixely);
         out = 0;
