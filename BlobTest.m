@@ -19,50 +19,91 @@ for fileNo = 1:size(fileList,1);
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
         fprintf(fileList(fileNo).name)
         fprintf('\n')
-        
+        figure(1)
+        oldcenter = [];
+        meanGray =[];
+        frames = 0;
+        hold on
         while hasFrame(clip)
-            eye = readFrame(clip);
-            eye = rgb2gray(eye);
-            eye = imsharpen(eye);
-            %eye = adapthisteq(eye,'clipLimit',0.005,'Distribution','rayleigh'); 
-            [out,irisIsolated,irisArea,centroid,avgPixelx,avgPixely] = IrisDetector(eye);
-%             video = adapthisteq(eye,'clipLimit',0.02,'Distribution','rayleigh'); 
-%             [out2,centers,radii,mask,eye2] = PupilOverlay(video,0,oldcenter);
-            if out == 0
-                break
-            else
-                RI = imref2d(size(irisIsolated));
-                subplot(2,2,1)
-                imshow(irisIsolated);
-                hold on
-                scatter(centroid(1),centroid(2),'r');
-                scatter(avgPixelx,avgPixely,'y');
-                hold off
-                subplot(2,2,2)
-                imshow(eye);
-                subplot(2,2,3)
-                fuse = imfuse(eye,irisIsolated);
-                imshow(fuse,RI);
-%                 subplot(2,2,4)
-%                 imshow(eye2);
-                pause(.5)
-                colormap gray
-                set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
+            video = readFrame(clip);
+            video=rgb2gray(video);
+            newmean = mean(video(:));
+            meanGray = [meanGray; newmean];
+            frames = frames + 1;
+        end
+        plot(1:1:frames,meanGray)
+        title('Mean Gray Values')
+        xlabel('Frame Number')
+        ylabel('Gray')
+        % Locate first frame with open eye
+        begin =0;
+        framefind = 1;
+        while begin == 0
+            if meanGray(framefind) < ((max(meanGray)-min(meanGray))*.25+min(meanGray))
+                startframe = framefind;
+                begin = 1;
+                line([startframe startframe],[min(meanGray) max(meanGray)+.1*max(meanGray)])
+                axis tight
+            end
+            framefind = framefind + 1;
+            if framefind > numel(meanGray)
+                fprintf('Cant locate start frame\n')
+                return
             end
         end
+        clip2 = VideoReader([filepath,'\',fileList(fileNo).name]);
+        figure(2)
+        counter =0;
+        while hasFrame(clip2)
+            eye = readFrame(clip2);
+            counter = counter + 1;
+            if counter < startframe
+                continue
+            else
+                if meanGray(counter) == max(meanGray)
+                    eye = rgb2gray(eye);
+                    eye = imsharpen(eye);
+                    %eye = adapthisteq(eye,'clipLimit',0.005,'Distribution','rayleigh');
+                    [out,irisIsolated,irisArea,centroid,avgPixelx,avgPixely] = IrisDetector(eye);
+                    %             video = adapthisteq(eye,'clipLimit',0.02,'Distribution','rayleigh');
+                    %             [out2,centers,radii,mask,eye2] = PupilOverlay(video,0,oldcenter);
+                    if out == 0
+                        break
+                    else
+                        RI = imref2d(size(irisIsolated));
+                        subplot(2,2,1)
+                        imshow(irisIsolated);
+                        hold on
+                        scatter(centroid(1),centroid(2),'r');
+                        scatter(avgPixelx,avgPixely,'y');
+                        hold off
+                        subplot(2,2,2)
+                        imshow(eye);
+                        subplot(2,2,3)
+                        fuse = imfuse(eye,irisIsolated);
+                        imshow(fuse,RI);
+                        %                 subplot(2,2,4)
+                        %                 imshow(eye2);
+                        pause(.5)
+                        colormap gray
+                        set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
+                    end
+                end
+            end
+        end
+        if out == 0
+            fprintf('Full Blink\n')
+            c{fileNo, 2} = 'Full';
+            toc
+        end
+        if out == 1
+            fprintf('Partial Blink\n')
+            c{fileNo, 2} = 'Partial';
+            toc
+        end
     end
-    if out == 0
-        fprintf('Full Blink\n')
-        c{fileNo, 2} = 'Full';
-        toc
-    end
-    if out == 1
-        fprintf('Partial Blink\n')
-        c{fileNo, 2} = 'Partial'; 
-        toc
-    end
-end    
-
+    
+end
 T = cell2table(c,'VariableNames',{'File_Name','Partial_or_Full'});
 writetable(T,'Blinks.csv')
 elapsed = toc(start);
