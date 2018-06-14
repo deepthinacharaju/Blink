@@ -1,4 +1,4 @@
-function [out,centers,radii,mask] = PupilOverlay(eye,plot,oldcenter)
+function [out,centers,radii,mask,eye2] = PupilOverlay(eye,plot,oldcenter)
 out = 1;
 %eye = rgb2gray(eye);
 %eye = adapthisteq(eye,'clipLimit',0.02,'Distribution','rayleigh'); 
@@ -19,8 +19,12 @@ if plot ==1
 end
  
 %tic
-[allcenters,allradii] = imfindcircles(eye,[160, 310],'ObjectPolarity','dark',...
+[allcenters1,allradii1] = imfindcircles(eye,[160, 235],'ObjectPolarity','dark',...
     'Sensitivity',0.95,'EdgeThreshold',0.05,'Method','twostage');
+[allcenters2,allradii2] = imfindcircles(eye,[235, 310],'ObjectPolarity','dark',...
+    'Sensitivity',0.95,'EdgeThreshold',0.05,'Method','twostage');
+allcenters = vertcat(allcenters1,allcenters2);
+allradii = vertcat(allradii1,allradii2);
 %toc
 %whos allcenters
 
@@ -50,8 +54,12 @@ if numel(centers) >= 2
 end
 
 while numel(centers) > 2 && counter < 5
-    [centers,radii] = imfindcircles(eye,[160, 310],'ObjectPolarity','dark',...
+    [centers1,radii1] = imfindcircles(eye,[160, 235],'ObjectPolarity','dark',...
         'Sensitivity',0.95-(counter+1)*0.01,'EdgeThreshold',0.05,'Method','twostage');
+    [centers2,radii2] = imfindcircles(eye,[235, 310],'ObjectPolarity','dark',...
+        'Sensitivity',0.95-(counter+1)*0.01,'EdgeThreshold',0.05,'Method','twostage');
+    centers = vertcat(centers1,centers2);
+    radii = vertcat(radii1,radii2);
     counter = counter + 1;
     fprintf('counter = %d\n',counter)
 end 
@@ -88,7 +96,7 @@ if plot == 1
     thresh = 10000000;
     h(h~=0) = thresh;
     hsize = size(h);
-    eye(ceil(centerX-hsize(1)./2):ceil(centerX+hsize(1)./2)-1,ceil(centerY-hsize(2)./2):ceil(centerY+hsize(2)./2)-1)= h;
+    eye(ceil(centerX-hsize(1)./2):ceil(centerX+hsize(1)./2)-1,ceil(centerY-hsize(2)./2):ceil(centerY+hsize(2)./2)-1) = h;
     subplot(1,3,3)
     eye2(eye==255)= 255;
     imshow(eye2)

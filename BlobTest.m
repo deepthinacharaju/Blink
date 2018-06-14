@@ -1,5 +1,7 @@
 clf; clear all;
 
+start = tic;
+
 filepath = 'C:\Users\esimons\Documents\MATLAB\Test'; % change to actual location
 
 %GenerateBlinkVideos(filepath); %generates videos for each blink
@@ -9,94 +11,43 @@ fileList = dir([filepath,'\*.avi']);
 c = cell(numel(fileList),2);
 out = [];
 oldcenter = [];
-pupilIntensityThreshold = 15;
-irisMovementThreshold = 150;
-eccentricityThreshold = 1;
-centroidPrev = [0 0];
-irisSizeThreshold = 5000;
-erodeDilateElement = strel('disk',5,0);
-specularIntensity = 220;
 
 for fileNo = 1:size(fileList,1);
     if ~strcmp(fileList(fileNo).name(end-6:end),'RAW.avi') %allows original file to be skipped
-        c{fileNo, 1} = fileList(fileNo).name;
         tic
+        c{fileNo, 1} = fileList(fileNo).name;
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
         fprintf(fileList(fileNo).name)
         fprintf('\n')
         
         while hasFrame(clip)
-            irisIsolated = readFrame(clip);
-            %set minIntensity to intensity of darkest pixel in frame
-            minIntensity = min(irisIsolated(:));
-            %set irisIsolated to true for all pixels in frame within
-            %pupilIntensityThreshold of minIntensity
-            irisIsolated = irisIsolated <= minIntensity + pupilIntensityThreshold;
-            %add to irisIsolated frame any pixels with intensity higher than
-            %specularIntensity
-            irisIsolated = irisIsolated + (irisIsolated >= specularIntensity);
-            %dilate irisIsolated
-            irisIsolated = imdilate(irisIsolated, erodeDilateElement);
-            %fill holes in irisIsolated
-            irisIsolated = imfill(irisIsolated,'holes');
-            %erode twice and dilate irisIsolated
-            irisIsolated = imdilate(imerode(imerode(irisIsolated,erodeDilateElement),erodeDilateElement),erodeDilateElement);
-            %set irisLabeled to label all contiguous blobs in pupilIsolated
-            irisIsolated = rgb2gray(irisIsolated);
-            irisLabeled = bwlabel(irisIsolated);
-            %calculate area, centroid, and eccentricity for each block in
-            %pupilIsolated
-            stats = regionprops(irisIsolated, 'Area','Centroid','Eccentricity');
-            %set irisArea to the size of the largest blob in irisIsolated. set
-            %irisLabel to the label number of the largest blob in irisIsolated.
-            [irisArea, irisLabel] = max([stats.Area]);
-            %set centroid to that of largest blob in irisIsolated.
-            centroid = round(stats(irisLabel).Centroid);
-            %set eccentricity to that of largest blob in irisIsolated.
-            eccentricity = stats(irisLabel).Eccentricity;
-            %blob must have low eccentricity (i.e. approximate a circle) and have a
-            %minimum number of pixels to be considered the iris.
-            %if eccentricity < eccentricityThreshold &  irisArea > irisSizeThreshold
-            if irisArea > irisSizeThreshold && irisArea < 500000
-                %check that the iris centroid did not move more than
-                %irisMovementThreshold from its previous location
-                if centroidPrev ~= [0 0]
-                    centroidMovement = (centroid(1) - centroidPrev(1))^2 + (centroid(2) - centroidPrev(2))^2;
-                    %If the pupil has not moved more than irisMovementThreshold
-                    %from the previous frame, set pupilIsolate to true for the
-                    %largest blob
-                    if centroidMovement < irisMovementThreshold^2
-                        irisIsolated  = (irisLabeled == irisLabel);
-                        centroidPrev = centroid;
-                        %out = 1;
-                        %If the pupil has exceeded the movement threshold,
-                        %delete frame
-                    else
-                        irisIsolated = [];
-                        fprintf('Centroid moved too much\n')
-                        %out = 0;
-                    end
-                else
-                    %If the previous centroid value was [0 0] (i.e. has not been
-                    %established yet), then this frame is not a blink frame
-                    irisIsolated  = (irisLabeled == irisLabel);
-                    centroidPrev = centroid;
-                    %out = 1;
-                end
-            else
-                irisIsolated = [];
-                fprintf('Iris not found\n')
-                out = 0;
-                continue
-            end
-
-            imshow(irisIsolated);
-            
-            if isempty(irisIsolated) == 1;
-                out = 0;
+            eye = readFrame(clip);
+            eye = rgb2gray(eye);
+            eye = imsharpen(eye);
+            %eye = adapthisteq(eye,'clipLimit',0.005,'Distribution','rayleigh'); 
+            [out,irisIsolated,irisArea,centroid,avgPixelx,avgPixely] = IrisDetector(eye);
+%             video = adapthisteq(eye,'clipLimit',0.02,'Distribution','rayleigh'); 
+%             [out2,centers,radii,mask,eye2] = PupilOverlay(video,0,oldcenter);
+            if out == 0
                 break
             else
-                out = 1;
+                RI = imref2d(size(irisIsolated));
+                subplot(2,2,1)
+                imshow(irisIsolated);
+                hold on
+                scatter(centroid(1),centroid(2),'r');
+                scatter(avgPixelx,avgPixely,'y');
+                hold off
+                subplot(2,2,2)
+                imshow(eye);
+                subplot(2,2,3)
+                fuse = imfuse(eye,irisIsolated);
+                imshow(fuse,RI);
+%                 subplot(2,2,4)
+%                 imshow(eye2);
+                pause(.5)
+                colormap gray
+                set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
             end
         end
     end
@@ -104,12 +55,15 @@ for fileNo = 1:size(fileList,1);
         fprintf('Full Blink\n')
         c{fileNo, 2} = 'Full';
         toc
-    else
+    end
+    if out == 1
         fprintf('Partial Blink\n')
-        c{fileNo, 2} = 'Partial';
+        c{fileNo, 2} = 'Partial'; 
         toc
-    end 
+    end
 end    
 
 T = cell2table(c,'VariableNames',{'File_Name','Partial_or_Full'});
 writetable(T,'Blinks.csv')
+elapsed = toc(start);
+fprintf('Total elapsed time is %f seconds.\n',elapsed);
