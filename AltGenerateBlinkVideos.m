@@ -29,7 +29,7 @@ framefind = 1;
 allmeanGray=meanGray;
 meanofall= mean(allmeanGray(:));
 while begin == 0
-    if allmeanGray(framefind) < ((max(allmeanGray)-min(allmeanGray))*.25 + min(allmeanGray))
+    if allmeanGray(framefind) < ((max(allmeanGray)-min(allmeanGray))*.3 + min(allmeanGray))
         firstframe = framefind;
         begin = 1;
     end

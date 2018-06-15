@@ -1,6 +1,6 @@
 function [out,irisIsolated,irisArea,centroid,avgPixelx,avgPixely,pixelList] = IrisDetector(eye)
 out = [1];
-pupilIntensityThreshold = 20;
+pupilIntensityThreshold = 25;
 irisMovementThreshold = 20;
 eccentricityThreshold = 1;
 centroidPrev = [0 0];
@@ -10,8 +10,19 @@ erodeDilateElement = strel('disk',5,0);
 specularIntensity = 220;
 counter = 0;
 
+%% Mask for Eye
+% xPoly = [200 400 600 800 1000 1200 1400 1200 1000 800 600 400 200];
+% yPoly = [500 225 100 100 100  225 500  780  780  790 780 700 500];
+% BW = poly2mask(xPoly,yPoly,832/2,1664/2);
+h_im = imshow(eye);
+e = imellipse(gca,[250 150 1250 650]);
+BW = createMask(e,h_im);
+eye(BW==0)=150;
+imshow(eye)
+    
 %%
-
+%     croppedEye = imcrop(eye,[200 1 1200 832]);
+%     eye = croppedEye;
     %set minIntensity to intensity of darkest pixel in frame
     minIntensity = min(eye(:));
     %fprintf('%d\n',sum(minIntensity(:)));
@@ -51,31 +62,33 @@ counter = 0;
     eccentricity = stats(irisLabel).Eccentricity;
     %set pixel list to that of largest blob in irisIsolated.
     pixelList = stats(irisLabel).PixelList;
+%       figure(5)
+%       imshow(irisIsolated)
     
     %%
     avgPixelx = mean(pixelList(1));
     avgPixely = mean(pixelList(2));
-    if irisArea > 7000 && (max(pixelList(1)) < 200 || min(pixelList(1)) > 1175)    
-        irisIsolated = [];
-        fprintf('Too big and far from center: Area: %d   x Distance: [%d,%d]\n',irisArea,avgPixelx,avgPixely);
-        out = 0;
-        return
-        %end
-    end
-    
-    if sum(sum(irisIsolated(750:end,:))) > 0 
-        irisIsolated = [];
-        fprintf('Blob too low: [%d,%d]\n',avgPixelx,avgPixely);
-        out = 0;
-        return
-    end
-    
-    if irisArea > 15000 && (max(pixelList(1)) < 425 || min(pixelList(1)) > 1300)     %used 300 for vids 4-6
-        irisIsolated = [];
-        fprintf('Way too big and far from center: Area: %d   Center: [%d,%d]\n',irisArea,avgPixelx,avgPixely);
-        out = 0;
-        return
-    end
+%     if irisArea > 7000 && (max(pixelList(1)) < 200 || min(pixelList(1)) > 1175)    
+%         irisIsolated = [];
+%         fprintf('Too big and far from center: Area: %d   x Distance: [%d,%d]\n',irisArea,avgPixelx,avgPixely);
+%         out = 0;
+%         return
+%         %end
+%     end
+%     
+%     if sum(sum(irisIsolated(750:end,:))) > 0 
+%         irisIsolated = [];
+%         fprintf('Blob too low: [%d,%d]\n',avgPixelx,avgPixely);
+%         out = 0;
+%         return
+%     end
+%     
+%     if irisArea > 15000 && (max(pixelList(1)) < 425 || min(pixelList(1)) > 1300)     %used 300 for vids 4-6
+%         irisIsolated = [];
+%         fprintf('Way too big and far from center: Area: %d   Center: [%d,%d]\n',irisArea,avgPixelx,avgPixely);
+%         out = 0;
+%         return
+%     end
     
     %blob must have low eccentricity (i.e. approximate a circle) and have a
     %minimum number of pixels to be considered the iris.
@@ -83,30 +96,30 @@ counter = 0;
     if irisArea > irisSizeThreshLower && irisArea < irisSizeThreshUpper && eccentricity && eccentricityThreshold
     %check that the iris centroid did not move more than
     %irisMovementThreshold from its previous location
-        if centroidPrev ~= [0 0]
-            centroidMovement = (centroid(1) - centroidPrev(1))^2 + (centroid(2) - centroidPrev(2))^2;
+%         if centroidPrev ~= [0 0]
+%             centroidMovement = (centroid(1) - centroidPrev(1))^2 + (centroid(2) - centroidPrev(2))^2;
             %If the pupil has not moved more than irisMovementThreshold
             %from the previous frame, set pupilIsolate to true for the
             %largest blob
-            if centroidMovement < irisMovementThreshold^2
-                irisIsolated  = (irisLabeled == irisLabel);
-                centroidPrev = centroid;
-                out = 1;
+%             if centroidMovement < irisMovementThreshold^2
+%                 irisIsolated  = (irisLabeled == irisLabel);
+%                 %centroidPrev = centroid;
+%                 out = 1;
             %If the pupil has exceeded the movement threshold,
             %delete frame
-            else
-                irisIsolated = [];
-                fprintf('Centroid moved %d pixels\n',centroidMovement)
-                out = 0;
-                return
-            end
-        else
-            %If the previous centroid value was [0 0] (i.e. has not been
-            %established yet), then this frame is not a blink frame
-            irisIsolated  = (irisLabeled == irisLabel);
-            centroidPrev = centroid;
-            out = 1;
-        end             
+%             else
+%                 irisIsolated = [];
+%                 fprintf('Centroid moved %d pixels\n',centroidMovement)
+%                 out = 0;
+%                 return
+%             end
+%         else
+%             %If the previous centroid value was [0 0] (i.e. has not been
+%             %established yet), then this frame is not a blink frame
+%             irisIsolated  = (irisLabeled == irisLabel);
+%             centroidPrev = centroid;
+%             out = 1;
+%         end             
     else
         irisIsolated = [];
         fprintf('Incorrect size: %d pixels\n',irisArea)
@@ -118,6 +131,7 @@ counter = 0;
 %     if isempty(irisIsolated) == 1;
 %         out = 0;
 %     end
+%     figure(5)
 %     subplot(1,3,1)
 %     imshow(irisIsolated);
 %     subplot(1,3,2)
@@ -126,5 +140,13 @@ counter = 0;
 %     fuse = imfuse(eye,irisIsolated);
 %     imshow(fuse);
 %     pause(.5)
+
+%       figure(5)
+%       imshow(irisIsolated)
+%       pause
+%       hold on
+%       plot(xPoly,yPoly,'r','LineWidth',2)
+%       hold off
+%       axis on
 %     colormap gray
 end
