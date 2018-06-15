@@ -1,7 +1,8 @@
 clf;
 fontSize = 14;
 
-vidObject = VideoReader('V0000000003_RAW_Blink1.avi');           %load video
+filepath = 'C:\Users\esimons\Documents\MATLAB'; % change to actual location
+vidObject = VideoReader('V0000000007_RAW.avi');           %load video
 numberOfFrames = vidObject.NumberOfFrames;                %number of frames
 vidHeight = vidObject.Height;                             %dimensions of video (832x1664)
 vidWidth = vidObject.Width;
