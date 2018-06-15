@@ -1,21 +1,57 @@
-function [blinkFrameList,startFrame,endFrame] = AltBlinkDetect(obj,firstframe,meanofall)
+function [firstframe,blinkFrameList,startFrame,endFrame] = AltBlinkDetect(obj)
 
 clf;
 fontSize = 14;
 frameBuffer = 10;
-numberOfFrames = obj.NumberOfFrames;            
+
+%% Determine Start Frame
+meanGray =[];
+frames = 0;
+hold on
+while hasFrame(clip)
+    video = readFrame(clip);
+    video=rgb2gray(video);
+    newmean = mean(video(:));
+    meanGray = [meanGray; newmean];
+    frames = frames + 1;
+end
+%         figure(2)
+%                 plot(1:1:frames,meanGray)
+%                 %pause(1)
+%                 title('Mean Gray Values')
+%                 xlabel('Frame Number')
+%                 ylabel('Gray')
+%         Locate first frame with open eye
+begin =0;
+framefind = 2;
+while begin == 0
+    if meanGray(framefind) < ((max(meanGray)-min(meanGray))*.25+min(meanGray))
+        firstframe = framefind;
+        begin = 1;
+        %line([startframe startframe],[min(meanGray) max(meanGray)+.1*max(meanGray)])
+        %axis tight
+    end
+    framefind = framefind + 1;
+    if framefind > numel(meanGray)
+        fprintf('Cant locate start frame\n')
+        return
+    end
+end
+%%
+%filepath = 'C:\Users\esimons\Documents\MATLAB';         % change to actual location
+%vidObject = VideoReader('V0000000007_RAW.avi');         %load video
+numberOfFrames = obj.NumberOfFrames;              %number of frames
+%vidHeight = vidObject.Height;                          %dimensions of video (832x1664)
+%vidWidth = vidObject.Width;
 numberOfFramesWritten = 0;
 % figure(1)
+
 meanGrayLevels = zeros(numberOfFrames, 1);
 
-%%
 for frame = 1 : numberOfFrames
     % Extract the frame from the movie structure.
     thisFrame = read(obj, frame);
-    if frame < firstframe
-    meanGrayLevels(frame) = meanofall;
-
-    else
+    
     % Display it
     %  	hImage = subplot(2, 1, 1);
     % 	image(thisFrame);
@@ -44,15 +80,18 @@ for frame = 1 : numberOfFrames
     %     end
     
     numberOfFramesWritten = numberOfFramesWritten + 1;
-    end
 end
-
-%%
-
+meanGrayLevels
 [peaksTotal,locsTotal] = findpeaks(meanGrayLevels,'MinPeakHeight',...
     min(meanGrayLevels)+.25*(max(meanGrayLevels)-min(meanGrayLevels)),'MinPeakDistance',4,'MinPeakProminence',3);
+totalBlinks = numel(peaksTotal);
+[peaksFullBlink,locsFull] = findpeaks(meanGrayLevels,'MinPeakHeight',...
+    max(peaksTotal)-(max(peaksTotal)- mean(meanGrayLevels))/2,'MinPeakDistance',4,...
+    'MinPeakProminence',3);
+fullBlinks = numel(peaksFullBlink);
+partialBlinks = totalBlinks - fullBlinks;
 
-blinkFrameList = zeros(numel(meanGrayLevels),1);
+blinkFrameList = zeros(500,1);%false(size(thisFrame,4),1);
 holdFrame = [];
 startFrame = [];
 endFrame = [];
@@ -62,11 +101,13 @@ plot(meanGrayLevels, 'k-', 'LineWidth', 2);
 hold on
 for frame = 1 : numberOfFrames
     thisFrame = read(obj, frame);
+    %if meanGrayLevels(frame) == peaksTotal
+    %if isempty(find(peaksTotal == meanGrayLevels(frame)) == 1
     for k=1:1:numel(peaksTotal)
         if meanGrayLevels(frame) == peaksTotal(k)
             blinkFrameList(frame) = true;
             holdFrame = [holdFrame;frame];
-            %fprintf('Peak at frame %d\n',frame);
+            fprintf('Peak at frame %d\n',frame);
             line([frame, frame],[min(meanGrayLevels), max(meanGrayLevels)]);
             startFrame = [startFrame;frame - frameBuffer];
             endFrame = [endFrame;frame + frameBuffer];
@@ -86,5 +127,15 @@ for frame = 1 : numberOfFrames
     ylabel('Gray Level');
 end
 
+%Pad each blink frame by three frames on either side.
+%
+% blinkFrameListTemp = blinkFrameList;
+%
+% for frameNo = 1:size(blinkFrameList, 1)
+%     blinkFrameListTemp(frameNo) = max(blinkFrameList(max(1,frameNo - 3):min(size(blinkFrameList,1),frameNo + 3)));
+%     %blinkFrameListTemp(frameNo) = max(size(blinkFrameList,1),frameNo - 3):min(size(blinkFrameList,1),frameNo + 3);
+% end
+%
+% blinkFrameList = blinkFrameListTemp;
 end
 

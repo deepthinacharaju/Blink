@@ -6,7 +6,7 @@ for fileNo = 1:size(fileList,1);
     disp(fileList(fileNo).name);
     obj = VideoReader([filepath,'\',fileList(fileNo).name]);
 
-%% Determine Start Frame
+  %% Determine Start Frame
 meanGray =[];
 frames = 0;
 hold on

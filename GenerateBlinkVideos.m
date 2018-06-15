@@ -1,4 +1,4 @@
-function GenerateBlinkVideos(filepath)
+function blinkFrameList = GenerateBlinkVideos(filepath)
 
 fileList = dir([filepath,'\*RAW.avi']);
 
