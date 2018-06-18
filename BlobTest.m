@@ -1,7 +1,11 @@
+% Uses IrisDetector.m and AltGenerateBlinkVideos.m to determine full and
+% partial blinks and print them to a CSV file
+
 clf; clear all; close all;
 
 start = tic;
 
+% generates blink videos from an entire patient video
 %filepath = 'C:\Users\esimons\Dropbox (Blur PD)\sam_partial_blinks\NEWPARTIALBLINK'; % change to actual location
 filepath = 'C:\Users\esimons\Documents\MATLAB\Test';
 
@@ -14,6 +18,7 @@ out = [];
 begin = 0;
 allmeanGray = [];
 
+% run loop for every file (blink video) in filepath
 for fileNo = 1:size(fileList,1);
     if ~strcmp(fileList(fileNo).name(end-6:end),'RAW.avi') %allows original file to be skipped
         tic
@@ -35,6 +40,8 @@ for fileNo = 1:size(fileList,1);
             saturation = 10;
             eye = rgb2gray(eye).^(exp(-0.1*saturation));
             meanGray = mean(eye(:));
+            % only want to analyze frame with max gray level (fullest
+            % blink)
             if meanGray == max(allmeanGray(:))
                 eye = imsharpen(eye);
                 saturation = 10;
@@ -85,11 +92,14 @@ for fileNo = 1:size(fileList,1);
         end
         
     end
+    % want space between each batch of blink videos in CSV file
     index = strfind(filepath,'Blink9');
     if ~isempty(index)
         c{fileNo+1,1} = ' ';
     end
 end
+
+% writes data to CSV file "Blinks.csv"
 T = cell2table(c,'VariableNames',{'File_Name','Blink_Type','MATLAB_Outcome'});
 writetable(T,'Blinks.csv')
 elapsed = toc(start);

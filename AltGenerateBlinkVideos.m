@@ -1,4 +1,5 @@
 function [blinkFrameList,firstframe,allmeanGray] = AltGenerateBlinkVideos(filepath)
+% Uses AltBlinkDetect.m to generate individual videos for each blink
 
 fileList = dir([filepath,'\*RAW.avi']);
 
@@ -29,6 +30,7 @@ framefind = 1;
 allmeanGray=meanGray;
 meanofall= mean(allmeanGray(:));
 while begin == 0
+    % prevents videos that start with eyes closed from counting as a blink
     if allmeanGray(framefind) < ((max(allmeanGray)-min(allmeanGray))*.3 + min(allmeanGray))
         firstframe = framefind;
         begin = 1;
@@ -39,7 +41,7 @@ while begin == 0
         return
     end
 end
-%%
+%% Writes video
     obj = VideoReader([filepath,'\',fileList(fileNo).name]);
     mov = read(obj);
     if size(mov,3) > 1

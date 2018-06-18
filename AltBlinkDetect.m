@@ -1,4 +1,6 @@
 function [blinkFrameList,startFrame,endFrame] = AltBlinkDetect(obj,firstframe,meanofall)
+% Reads each frame of a video and determines where the blinks occur using
+% mean gray levels
 
 clf;
 fontSize = 14;
@@ -8,7 +10,7 @@ numberOfFramesWritten = 0;
 % figure(1)
 meanGrayLevels = zeros(numberOfFrames, 1);
 
-%%
+%% Find mean gray levels of each frame
 for frame = 1 : numberOfFrames
     % Extract the frame from the movie structure.
     thisFrame = read(obj, frame);
@@ -63,14 +65,18 @@ hold on
 for frame = 1 : numberOfFrames
     thisFrame = read(obj, frame);
     for k=1:1:numel(peaksTotal)
-        if meanGrayLevels(frame) == peaksTotal(k)
+        if meanGrayLevels(frame) == peaksTotal(k) 
+            %blinkFrameList stores frame with peak gray level (blink)
             blinkFrameList(frame) = true;
             holdFrame = [holdFrame;frame];
             %fprintf('Peak at frame %d\n',frame);
             line([frame, frame],[min(meanGrayLevels), max(meanGrayLevels)]);
-            startFrame = [startFrame;frame - frameBuffer];
+            %blink video contains a few frames before and after blink
+            startFrame = [startFrame;frame - frameBuffer]; 
             endFrame = [endFrame;frame + frameBuffer];
             if k~=1
+                % if two blinks are close to each other, don't want videos
+                % to capture two blinks
                 if startFrame(k) < endFrame(k-1)
                     startFrame(k) = round((endFrame(k-1)-frameBuffer)+(frame - (endFrame(k-1)-frameBuffer))/2);
                     endFrame(k-1) = startFrame(k);
@@ -78,8 +84,8 @@ for frame = 1 : numberOfFrames
             end
         end
     end
-    startFrame(startFrame<1)=1;
-    endFrame(endFrame>numel(blinkFrameList))=numel(blinkFrameList);
+    startFrame(startFrame<1)=1; %can't have frame less than frame one
+    endFrame(endFrame>numel(blinkFrameList))=numel(blinkFrameList); %can't have frame number higher than total frames
     hold off
     grid on;
     xlabel('Frame Number');

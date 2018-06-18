@@ -1,4 +1,7 @@
 function [out,irisIsolated,irisArea,centroid,avgPixelx,avgPixely,pixelList] = IrisDetector(eye)
+% Uses blob analysis to determine if pupil and iris can be identified
+% during frame with max gray level (fullest blink)
+
 out = [1];
 pupilIntensityThreshold = 25;
 irisMovementThreshold = 20;
@@ -10,7 +13,7 @@ erodeDilateElement = strel('disk',5,0);
 specularIntensity = 220;
 counter = 0;
 
-%% Mask for Eye
+%% Mask for Eye, to try and get rid of blobs in corners being picked up
 % xPoly = [200 400 600 800 1000 1200 1400 1200 1000 800 600 400 200];
 % yPoly = [500 225 100 100 100  225 500  780  780  790 780 700 500];
 % BW = poly2mask(xPoly,yPoly,832/2,1664/2);
@@ -23,6 +26,7 @@ imshow(eye)
 %%
 %     croppedEye = imcrop(eye,[200 1 1200 832]);
 %     eye = croppedEye;
+
     %set minIntensity to intensity of darkest pixel in frame
     minIntensity = min(eye(:));
     %fprintf('%d\n',sum(minIntensity(:)));
@@ -42,6 +46,7 @@ imshow(eye)
 %         fprintf('counter: %d\n',counter);
 %         counter = counter + 5;
 %     end
+
     %dilate irisIsolated
     irisIsolated = imdilate(irisIsolated2, erodeDilateElement);
     %fill holes in irisIsolated
@@ -121,7 +126,7 @@ imshow(eye)
 %             out = 1;
 %         end             
     else
-        irisIsolated = [];
+        irisIsolated = []; %if iris not found (full blink), delete entry
         fprintf('Incorrect size: %d pixels\n',irisArea)
         out = 0;
         return
