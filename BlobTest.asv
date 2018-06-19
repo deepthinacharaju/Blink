@@ -15,7 +15,7 @@ fileList = dir([filepath,'\*.avi']);
 
 c = cell(numel(fileList),2);
 out = [];
-out3 = 5;
+out3 = [];
 begin = 0;
 alleyesum = [];
 % run loop for every file (blink video) in filepath
@@ -54,7 +54,7 @@ for fileNo = 1:size(fileList,1);
                 eye1 = imsharpen(eye1);
                 saturation = 10;
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
-                %eye1 = imgaussfilt(eye1,.9);
+                eye1 = imgaussfilt(eye1,.9);
                 figure(20)
                 h_im = imshow(eye1);
                 e = imellipse(gca,[250 150 1250 650]);
@@ -124,8 +124,8 @@ for fileNo = 1:size(fileList,1);
                     set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
                 end
             end
-            if meanGray >= max(allmeanGray(:))-0.01*max(allmeanGray(:)) && ...
-                    meanGray <= max(allmeanGray(:))+0.01*max(allmeanGray(:)) && ...
+            if meanGray >= max(allmeanGray(:))-0.05*max(allmeanGray(:)) && ...
+                    meanGray <= max(allmeanGray(:))+0.05*max(allmeanGray(:)) && ...
                     meanGray ~= max(allmeanGray(:))
                 eye1 = imsharpen(eye1);
                 saturation = 10;
@@ -138,31 +138,31 @@ for fileNo = 1:size(fileList,1);
                 eye1(BW==0)=150;
                 set(gcf,'Visible','off');
                 [out3,irisLabeled,totalArea,totalXCentroid] = IrisDetector(eye1);
-%                     if out3 == 1
-%                         figure()
-%                         RI = imref2d(size(irisLabeled));
-%                         subplot(2,2,1)
-%                         imshow(eye1,RI)
-%                         title(fileList(fileNo).name)
-%                         subplot(2,2,2)
-%                         RI = imref2d(size(eye));
-%                         imshow(eye,RI);
-%                         subplot(2,2,3)
-%                         imshow(irisLabeled,RI);
-%                         colormap gray
-%                         set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
-%                     end
+                    if out3 == 1
+                        figure()
+                        RI = imref2d(size(irisLabeled));
+                        subplot(2,2,1)
+                        imshow(eye1,RI)
+                        title(fileList(fileNo).name)
+                        subplot(2,2,2)
+                        RI = imref2d(size(eye));
+                        imshow(eye,RI);
+                        subplot(2,2,3)
+                        imshow(irisLabeled,RI);
+                        colormap gray
+                        set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
+                    end
             end
         end
-        if (out == 1) && (out3 == 1)
+        if out == 1 && out3 == 1
             fprintf('Partial Blink\n')
             c{fileNo, 3} = 'Partial';
             toc
         else
             fprintf('Full Blink\n')
-            fprintf('Max Frame: %d\n',out);
-            if isempty(out3) == false
-                fprintf('Other Frame: %d\n',out3);
+            fprintf('Max Frame: %d',out);
+            if isempty(out3) ~= 0
+                fprintf('Other Frame: %d',out3);
             end
             c{fileNo, 3} = 'Full';
             toc
