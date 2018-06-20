@@ -2,7 +2,7 @@
 % partial blinks and print them to a CSV file
 
 clf; clear all; close all;
-debug = true;
+debug = false;
 
 start = tic;
 
@@ -75,6 +75,11 @@ for fileNo = 1:size(fileList,1);
                 [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = ...
                     IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq);
                 %counter = counter + 1;
+                % if we find a full blink, we don't need to look any
+                % further
+                if out == 0
+                    break
+                end
                 if debug == true
                     if out == 1
                         figure()
@@ -101,10 +106,12 @@ for fileNo = 1:size(fileList,1);
             
             % if another frame has a gray level close to max level, also
             % look at that frame and see if it has a full blink
+            out3 = 1;
+            altFrameCounter = 1;
             if meanGray >= max(allmeanGray(:))-0.01*max(allmeanGray(:)) && ...
                     meanGray <= max(allmeanGray(:))+0.01*max(allmeanGray(:)) && ...
                     meanGray ~= max(allmeanGray(:))
-                fprintf('Found frame with comparable gray levels\n');
+                fprintf('Found frame with comparable gray levels, frame %i\n',altFrameCounter);
                 %eye1 = imsharpen(eye1);
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
                 %eye1 = imgaussfilt(eye1,.9);
@@ -133,25 +140,42 @@ for fileNo = 1:size(fileList,1);
                         set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
                     end
                 end
-            else
-                out3 = 1;
+                % if we find a full blink in an additional high-gray level 
+                % frame, then we can call it a full blink
+                altFrameCounter = altFrameCounter + 1;
+            end
+            if out3 == 0
+                break
             end
         end
         
         % print outcome and read to CSV file
-        if (out == 1) && (out3 == 1)
-            fprintf('Partial Blink\n')
-            c{fileNo, 3} = 'Partial';
-            toc
-        else
+        if out == 0 || out3 == 0
             fprintf('Full Blink\n')
-            if out3 ~= 1
+            if out3 == 0
                 fprintf('Max Gray Frame: out = %d\n',out);
                 fprintf('Other Frame: out = %d\n',out3);
             end
             c{fileNo, 3} = 'Full';
             toc
+        else
+            fprintf('Partial Blink\n')
+            c{fileNo, 3} = 'Partial';
+            toc
         end
+%         if ((out == 1) && (out3 == 1)) || ((out == 1) && (out3 == 2))
+%             fprintf('Partial Blink\n')
+%             c{fileNo, 3} = 'Partial';
+%             toc
+%         elseif out == 0 || out3 == 0
+%             fprintf('Full Blink\n')
+%             if out3 == 0
+%                 fprintf('Max Gray Frame: out = %d\n',out);
+%                 fprintf('Other Frame: out = %d\n',out3);
+%             end
+%             c{fileNo, 3} = 'Full';
+%             toc
+%         end
         fprintf('\n')
     end
     

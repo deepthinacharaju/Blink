@@ -3,7 +3,7 @@ function [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = IrisDetecto
 % with max gray level (fullest blink), and if it's in same place as fully
 % open eye
 
-out = [];
+out = 2;
 pupilIntensityThreshold = 25;
 irisSizeThreshold = 150;
 irisMovementThreshold = 200;
@@ -14,7 +14,7 @@ irisSizeThreshUpper = 150000;
 erodeDilateElement = strel('disk',5,0);
 specularIntensity = 220;
 
-debug = true;
+debug = false;
 
 %% Mask for Eye, to only look at area iris initially was
 % xPoly = [200 400 600 800 1000 1200 1400 1200 1000 800 600 400 200];
@@ -134,7 +134,7 @@ eye = eyeImage;
         blobPerimeter = blobMeasurements(k).Perimeter;      	% Get perimeter.
         blobCentroid = blobMeasurements(k).Centroid;        	% Get centroid one at a time
         blobECD(k) = sqrt(4 * blobArea / pi);					% Compute ECD - Equivalent Circular Diameter.
-        if debug == true
+        if debug == false
             fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f\n',...
                 k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k));
         end
@@ -222,7 +222,7 @@ eye = eyeImage;
     totalArea = sum(newAllBlobAreas);
     newAllBlobCentroids = [newBlobMeasurements.Centroid];
     newCentroidsX = newAllBlobCentroids(1:2:end-1);
-    fprintf('Centroids: %d\n',newCentroidsX);
+    fprintf('Centroids: %f\n',newCentroidsX);
     newCentroidsY = newAllBlobCentroids(2:2:end);
     totalXCentroid = mean(newCentroidsX);
     totalYCentroid = mean(newCentroidsY);
@@ -233,15 +233,18 @@ eye = eyeImage;
         centroidMovement = (totalXCentroid - initialXCentroid)^2 + (totalYCentroid - initialYCentroid)^2;
         if centroidMovement < irisMovementThreshold^2
             out = 1;
+            fprintf('partial\n');
         %   If the pupil has exceeded the movement threshold, delete frame
         else
 %             irisIsolated = [];
             fprintf('Centroid moved %f pixels\n',centroidMovement)
             out = 0;
+            fprintf('full\n');
         end
     else
         fprintf('Blob not correct size or in correct location\n');
         out = 0;
+        fprintf('full\n')
         return
     end
     %% Old Code
@@ -323,12 +326,12 @@ eye = eyeImage;
 
 %% Other Figures
 
-    figure(80)
-    imshow(irisLabeled)
-    hold on
-    scatter(totalXCentroid,totalYCentroid,'ro')
-    hold off
-    axis on
-    colormap gray
-    pause()
+%     figure(80)
+%     imshow(irisLabeled)
+%     hold on
+%     scatter(totalXCentroid,totalYCentroid,'ro')
+%     hold off
+%     axis on
+%     colormap gray
+%     pause()
 end

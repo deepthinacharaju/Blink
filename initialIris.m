@@ -3,7 +3,6 @@ function [initialEye,initialArea,initialXCentroid,initialYCentroid,equivDiaSq] =
 % open, for comparison against blob location during fullest blink
 % (irisDetector.m)
 
-out = [];
 pupilIntensityThreshold = 25;
 irisSizeThreshLower = 1500;
 irisSizeThreshUpper = 150000;
@@ -68,7 +67,7 @@ debug = false;
         blobCentroid = blobMeasurements(k).Centroid;		 % Get centroid one at a time.
         blobECD(k) = sqrt(4 * blobArea / pi);                % Compute ECD - Equivalent Circular Diameter.
         blobEccentricity = blobMeasurements(k).Eccentricity; % Get ecentricity.
-        if debug == true
+        if debug == false
             fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f %8.1f\n',...
                 k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k),blobEccentricity);
         end
