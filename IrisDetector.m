@@ -1,4 +1,4 @@
-function [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = IrisDetector(eye,initialXCentroid,initialYCentroid,equivDiaSq)
+function [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = IrisDetector(eye,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL)
 % Uses blob analysis to determine if iris can be identified during frame
 % with max gray level (fullest blink), and if it's in same place as fully
 % open eye
@@ -7,8 +7,6 @@ out = 2;
 pupilIntensityThreshold = 25;
 irisSizeThreshold = 150;
 irisMovementThreshold = 200;
-%eccentricityThreshold = 1;
-%centroidPrev = [0 0];
 irisSizeThreshLower = 2000;
 irisSizeThreshUpper = 150000;
 erodeDilateElement = strel('disk',5,0);
@@ -118,15 +116,15 @@ eye = eyeImage;
         thisBoundary = boundaries{k};
         plot(thisBoundary(:,2), thisBoundary(:,1), 'r', 'LineWidth', 2);
         end
-        title('Before')
+        title('Before, Iris Detector')
         hold off
         %pause()
     end
 
     %% Get properties of each blob
-    if debug == true
+    %if debug == true
         fprintf('IrisDetector.m :\n');
-    end
+    %end
     for k = 1 : numberOfBlobs                                   % Loop through all blobs.
         thisBlobsPixels = blobMeasurements(k).PixelIdxList;     % Get list of pixels in current blob.
         meanGL = blobMeasurements(k).MeanIntensity;             % Get mean of current blob
@@ -134,10 +132,11 @@ eye = eyeImage;
         blobPerimeter = blobMeasurements(k).Perimeter;      	% Get perimeter.
         blobCentroid = blobMeasurements(k).Centroid;        	% Get centroid one at a time
         blobECD(k) = sqrt(4 * blobArea / pi);					% Compute ECD - Equivalent Circular Diameter.
-        if debug == false
-            fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f\n',...
-                k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k));
-        end
+        blobEccentricity = blobMeasurements(k).Eccentricity; % Get ecentricity.
+        %if debug == false
+            fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f %8.1f\n',...
+                k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k),blobEccentricity);
+        %end
     end
     
     %% Isolate blobs we care about
@@ -218,111 +217,82 @@ eye = eyeImage;
     end
 
     %% Classify blink
+    
+    if newNumberOfBlobs == 0
+        fprintf('No blob found\n');
+        out = 0;
+        totalArea = [];
+        totalXCentroid = [];
+        totalYCentroid = [];
+        fprintf('full\n');
+        return
+    end
+    
     newAllBlobAreas = [newBlobMeasurements.Area];
     totalArea = sum(newAllBlobAreas);
     newAllBlobCentroids = [newBlobMeasurements.Centroid];
     newCentroidsX = newAllBlobCentroids(1:2:end-1);
-    fprintf('Centroids: %f\n',newCentroidsX);
+    fprintf('X Centroids: %f\n',newCentroidsX);
     newCentroidsY = newAllBlobCentroids(2:2:end);
     totalXCentroid = mean(newCentroidsX);
     totalYCentroid = mean(newCentroidsY);
-
-    if totalArea > irisSizeThreshLower && totalXCentroid >= 500 && totalXCentroid <= 1100 && totalYCentroid <= 700
-        %   If the pupil has not moved more than irisMovementThreshold
-        %   from the previous frame, set pupilIsolate to true for the largest blob
-        centroidMovement = (totalXCentroid - initialXCentroid)^2 + (totalYCentroid - initialYCentroid)^2;
-        if centroidMovement < irisMovementThreshold^2
-            out = 1;
-            fprintf('partial\n');
-        %   If the pupil has exceeded the movement threshold, delete frame
+    newMeanGL = [newBlobMeasurements.MeanIntensity];
+    if numel(newMeanGL) > 1
+        newMeanGL = mean(newMeanGL(:));
+    end
+    if isempty(newMeanGL) == false
+       GLRatio = initialMeanGL / newMeanGL;
+    end
+    totalEccentricity = [newBlobMeasurements.Eccentricity];
+    if numel(totalEccentricity) > 1
+        totalEccentricity = mean(totalEccentricity);
+    end
+    
+    %if debug == true
+        fprintf('New blob measurements: \n');
+        fprintf(1,'# 1 %17.1f %11.1f %17.1f % 8.1f %17.1f\n', newMeanGL, ...
+            totalArea, totalXCentroid, totalYCentroid, totalEccentricity);
+        fprintf('Gray Level Ratio: %f\n',GLRatio);
+    %end
+    
+    % Blob must be at least a certain size to qualify as iris
+    if totalArea > irisSizeThreshLower
+        % Blob must be generally centered in frame
+        if totalXCentroid >= 500 && totalXCentroid <= 1100 && totalYCentroid <= 700
+            %   Blob cannot have moved more than irisMovementThreshold from
+            %   initial frame
+            centroidMovement = (totalXCentroid - initialXCentroid)^2 + (totalYCentroid - initialYCentroid)^2;
+            if centroidMovement < irisMovementThreshold^2
+                fprintf('Centroid moved %f pixels\n',centroidMovement)
+                % Blob must meet a minimum gray level to qualify as iris
+                if GLRatio >= 0.2
+                    out = 1;
+                    fprintf('partial\n');
+                else
+                    fprintf('Blob not dark enough\n');
+                    out = 0;
+                    fprintf('full\n');
+                    return
+                end
+            %   If the pupil has exceeded the movement threshold, delete frame
+            else
+                fprintf('Centroid moved %f pixels\n',centroidMovement)
+                out = 0;
+                fprintf('full\n');
+                return
+            end
         else
-%             irisIsolated = [];
-            fprintf('Centroid moved %f pixels\n',centroidMovement)
+            fprintf('Blob not in correct location\n')
             out = 0;
             fprintf('full\n');
+            return
         end
     else
-        fprintf('Blob not correct size or in correct location\n');
+        fprintf('Blob not correct size\n');
         out = 0;
-        fprintf('full\n')
+        fprintf('full\n');
         return
     end
-    %% Old Code
-    %calculate area, centroid, and eccentricity for each block in
-    %pupilIsolated
-    %stats = regionprops(irisLabeled,'Area','Centroid','Eccentricity','PixelList');
-    %set irisArea to the size of the largest blob in irisIsolated. set
-    %irisLabel to the label number of the largest blob in irisIsolated.
-    %[irisArea, irisLabel] = max([stats.Area]);
-    %set centroid to that of largest blob in irisIsolated.
-    %centroid = round(stats(irisLabel).Centroid);
-    %set eccentricity to that of largest blob in irisIsolated.
-    %eccentricity = stats(irisLabel).Eccentricity;
-    %set pixel list to that of largest blob in irisIsolated.
-    %pixelList = stats(irisLabel).PixelList;
-%       figure(5)
-%       imshow(irisIsolated)
-
-%     avgPixelx = mean(pixelList(1));
-%     avgPixely = mean(pixelList(2));
-%     if irisArea > 7000 && (max(pixelList(1)) < 200 || min(pixelList(1)) > 1175)    
-%         irisIsolated = [];
-%         fprintf('Too big and far from center: Area: %d   x Distance: [%d,%d]\n',irisArea,avgPixelx,avgPixely);
-%         out = 0;
-%         return
-%         %end
-%     end
-%     
-%     if sum(sum(irisIsolated(750:end,:))) > 0 
-%         irisIsolated = [];
-%         fprintf('Blob too low: [%d,%d]\n',avgPixelx,avgPixely);
-%         out = 0;
-%         return
-%     end
-%     
-%     if irisArea > 15000 && (max(pixelList(1)) < 425 || min(pixelList(1)) > 1300)     %used 300 for vids 4-6
-%         irisIsolated = [];
-%         fprintf('Way too big and far from center: Area: %d   Center: [%d,%d]\n',irisArea,avgPixelx,avgPixely);
-%         out = 0;
-%         return
-%     end
-    
-    %blob must have low eccentricity (i.e. approximate a circle) and have a
-    %minimum number of pixels to be considered the iris.
-    %if eccentricity < eccentricityThreshold &  irisArea > irisSizeThreshold
-%     if irisArea > irisSizeThreshLower && irisArea < irisSizeThreshUpper
-    %check that the iris centroid did not move more than
-    %irisMovementThreshold from its previous location
-%         if centroidPrev ~= [0 0]
-%             centroidMovement = (centroid(1) - centroidPrev(1))^2 + (centroid(2) - centroidPrev(2))^2;
-            %If the pupil has not moved more than irisMovementThreshold
-            %from the previous frame, set pupilIsolate to true for the
-            %largest blob
-%             if centroidMovement < irisMovementThreshold^2
-%                 irisIsolated  = (irisLabeled == irisLabel);
-%                 %centroidPrev = centroid;
-%                 out = 1;
-            %If the pupil has exceeded the movement threshold,
-            %delete frame
-%             else
-%                 irisIsolated = [];
-%                 fprintf('Centroid moved %d pixels\n',centroidMovement)
-%                 out = 0;
-%                 return
-%             end
-%         else
-%             %If the previous centroid value was [0 0] (i.e. has not been
-%             %established yet), then this frame is not a blink frame
-%             irisIsolated  = (irisLabeled == irisLabel);
-%             centroidPrev = centroid;
-%             out = 1;
-%         end             
-%     else
-%         irisIsolated = []; %if iris not found (full blink), delete entry
-%         fprintf('Incorrect size: %d pixels\n',irisArea)
-%         out = 0;
-%         return
-%     end
 
 %% Other Figures
 

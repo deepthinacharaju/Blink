@@ -1,21 +1,29 @@
-function [initialEye,initialArea,initialXCentroid,initialYCentroid,equivDiaSq] = initialIris(eye,fileList,fileNo)
+function [initialEye,initialArea,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL] = initialIris(eye,fileList,fileNo)
 % Uses blob analysis to determine where iris is when eye is fully
 % open, for comparison against blob location during fullest blink
 % (irisDetector.m)
 
-pupilIntensityThreshold = 25;
+pupilIntensityThreshold = 23;
 irisSizeThreshLower = 1500;
 irisSizeThreshUpper = 150000;
 erodeDilateElement = strel('disk',5,0);
 specularIntensity = 220;
 
 debug = false;
-    
+
+%% Create mask to only look for iris around eye
+    h_im = imshow(eye);
+    e = imellipse(gca,[200 100 1250 700]);
+    BW = createMask(e,h_im);
+    eye(BW==0)=150;
+    set(gcf,'Visible','off');
+    eyeImage = eye;
+
 %% Find blobs
 
     %set minIntensity to intensity of darkest pixel in frame
     minIntensity = min(eye(:));
-    %fprintf('%d\n',sum(minIntensity(:)));
+    fprintf('minIntensity: %d\n',sum(minIntensity(:)));
     %set irisIsolated to true for all pixels in frame within
     %pupilIntensityThreshold of minIntensity
     irisIsolated1 = eye <= minIntensity + pupilIntensityThreshold;
@@ -50,15 +58,15 @@ debug = false;
         plot(thisBoundary(:,2), thisBoundary(:,1), 'r', 'LineWidth', 2);
         end
         hold off
-        title(sprintf('Before %s', fileList(fileNo).name));
+        title(sprintf('Before, Initial Iris, %s',fileList(fileNo).name));
         axis on
         %pause()
     end
 
     %% Get properties of each blob
-    if debug == true
+    %if debug == true
         fprintf('initialIris.m :\n');
-    end
+    %end
     for k = 1 : numberOfBlobs                                % Loop through all blobs.
         thisBlobsPixels = blobMeasurements(k).PixelIdxList;  % Get list of pixels in current blob.
         meanGL = blobMeasurements(k).MeanIntensity;          % Get mean of current blob
@@ -67,10 +75,10 @@ debug = false;
         blobCentroid = blobMeasurements(k).Centroid;		 % Get centroid one at a time.
         blobECD(k) = sqrt(4 * blobArea / pi);                % Compute ECD - Equivalent Circular Diameter.
         blobEccentricity = blobMeasurements(k).Eccentricity; % Get ecentricity.
-        if debug == false
+        %if debug == true
             fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f %8.1f\n',...
                 k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k),blobEccentricity);
-        end
+        %end
     end
     
     %% Isolate blobs we care about
@@ -123,6 +131,10 @@ debug = false;
     equivDiaSq = sqrt(4 * initialArea / pi);
     initialXCentroid = mean(newCentroidsX);
     initialYCentroid = mean(newCentroidsY);
+    initialMeanGL = [newBlobMeasurements.MeanIntensity];
+    if numel(initialMeanGL) > 1
+        initialMeanGL = mean(initialMeanGL(:));
+    end
     newEccentricity = [newBlobMeasurements.Eccentricity];
     if numel(newEccentricity) > 1
         newEccentricity = mean(newEccentricity);
@@ -132,10 +144,11 @@ debug = false;
         fprintf('No iris-like blobs found.\n')
         return
     end
-    if debug == true
+    %if debug == true
         fprintf('New blob measurements: \n');
-        fprintf(1,'#1 %30.1f %17.1f % 8.1f %17.1f\n', initialArea, initialXCentroid, initialYCentroid, newEccentricity);
-    end
+        fprintf(1,'# 1 %17.1f %11.1f %17.1f % 8.1f %17.1f\n', initialMeanGL, initialArea, initialXCentroid, initialYCentroid, newEccentricity);
+    %end
+
 %     if initialArea > irisSizeThreshLower && initialXCentroid >= 500 && initialXCentroid <= 1100 && initialYCentroid <= 700
 %         out = 1;
 %         fprintf('Blob: Partial\n');
@@ -145,6 +158,13 @@ debug = false;
 %     end
 
 %% Other Figures
+
+% if debug == true
+%       figure(75)
+%       fuse = imfuse(irisLabeled,eyeImage);
+%       imshow(fuse);
+%       pause()
+% end
 
 %     figure(70)
 %     imshow(initialEye)

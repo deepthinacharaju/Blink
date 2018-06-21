@@ -1,8 +1,8 @@
 % Uses IrisDetector.m and AltGenerateBlinkVideos.m to determine full and
 % partial blinks and print them to a CSV file
 
-clf; clear all; close all;
-debug = false;
+%clf; clear all; close all;
+debug = true;
 
 start = tic;
 
@@ -53,10 +53,11 @@ for fileNo = 1:size(fileList,1);
             
             % Find iris when eye is open
             if meanGray == eyeOpenValue && counter == 1
-                [initialEye,initialArea,initialXCentroid,initialYCentroid,equivDiaSq] = initialIris(eye1,fileList,fileNo);
+                [initialEye,initialArea,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL] = initialIris(eye1,fileList,fileNo);
                 counter = counter + 1;
             end
         end
+        figcount = 0;        
         
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
         while hasFrame(clip)
@@ -73,7 +74,7 @@ for fileNo = 1:size(fileList,1);
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
                 %eye1 = imgaussfilt(eye1,.9);
                 [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = ...
-                    IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq);
+                    IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL);
                 %counter = counter + 1;
                 % if we find a full blink, we don't need to look any
                 % further
@@ -103,11 +104,17 @@ for fileNo = 1:size(fileList,1);
                     end
                 end    
             end
+        end
             
-            % if another frame has a gray level close to max level, also
-            % look at that frame and see if it has a full blink
-            out3 = 1;
-            altFrameCounter = 1;
+        % if another frame has a gray level close to max level, also
+        % look at that frame and see if it has a full blink
+        out3 = 2;
+        altFrameCounter = 1;
+        clip = VideoReader([filepath,'\',fileList(fileNo).name]);
+        while hasFrame(clip)
+            eye = readFrame(clip);
+            eye1 = rgb2gray(eye);
+            meanGray = mean(eye1(:));
             if meanGray >= max(allmeanGray(:))-0.01*max(allmeanGray(:)) && ...
                     meanGray <= max(allmeanGray(:))+0.01*max(allmeanGray(:)) && ...
                     meanGray ~= max(allmeanGray(:))
@@ -116,7 +123,7 @@ for fileNo = 1:size(fileList,1);
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
                 %eye1 = imgaussfilt(eye1,.9);
                 [out3,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = ...
-                    IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq);
+                    IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL);
                 if debug == true
                     if out3 == 1
                         figure()
@@ -126,8 +133,8 @@ for fileNo = 1:size(fileList,1);
                         title(fileList(fileNo).name)
                         subplot(2,2,2)
                         RI = imref2d(size(eye));
-                        title('Original Image - Non-Max Gray Frame')
                         imshow(eye,RI);
+                        title('Original Image - Non-Max Gray Frame')
                         subplot(2,2,3)
                         imshow(irisLabeled,RI);
                         title('Blob(s) Found')
@@ -135,17 +142,16 @@ for fileNo = 1:size(fileList,1);
                         fuse = imfuse(irisLabeled,eye1);
                         imshow(fuse,RI);
                         title('Blob(s) Overlayed on Edited Image')
-
                         colormap gray
                         set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
                     end
                 end
                 % if we find a full blink in an additional high-gray level 
                 % frame, then we can call it a full blink
+                if out3 == 0
+                    break
+                end
                 altFrameCounter = altFrameCounter + 1;
-            end
-            if out3 == 0
-                break
             end
         end
         
@@ -163,19 +169,7 @@ for fileNo = 1:size(fileList,1);
             c{fileNo, 3} = 'Partial';
             toc
         end
-%         if ((out == 1) && (out3 == 1)) || ((out == 1) && (out3 == 2))
-%             fprintf('Partial Blink\n')
-%             c{fileNo, 3} = 'Partial';
-%             toc
-%         elseif out == 0 || out3 == 0
-%             fprintf('Full Blink\n')
-%             if out3 == 0
-%                 fprintf('Max Gray Frame: out = %d\n',out);
-%                 fprintf('Other Frame: out = %d\n',out3);
-%             end
-%             c{fileNo, 3} = 'Full';
-%             toc
-%         end
+
         fprintf('\n')
     end
     
