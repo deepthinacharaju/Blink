@@ -4,9 +4,10 @@ function [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = IrisDetecto
 % open eye
 
 out = 2;
+% these values are arbitrary...
 pupilIntensityThreshold = 25;
-irisSizeThreshold = 150;
-irisMovementThreshold = 200;
+irisSizeThreshold = 115; %previously 150
+irisMovementThreshold = 210;
 irisSizeThreshLower = 2000;
 irisSizeThreshUpper = 150000;
 erodeDilateElement = strel('disk',5,0);
@@ -28,15 +29,19 @@ z = circlepixels;
 centerX = initialXCentroid;
 centerY = initialYCentroid;
 ind = sub2ind(sizeEye,centerY,centerX);
-radius = equivDiaSq / 2 + irisSizeThreshold;
+actualRadius = equivDiaSq / 2;
+radius = actualRadius + irisSizeThreshold;
 % if mask goes out of frame, error has occured
-if centerY > imagesizey - radius || centerY < radius || centerX < radius || centerX > imagesizex - radius
+if centerY > imagesizey - actualRadius || centerY < actualRadius || ...
+        centerX < actualRadius || centerX > imagesizex - actualRadius
     fprintf('Error: Mask goes out of frame, no iris found.\n');
+    fprintf('Size: %i x %i\nCenter: [%f, %f]\nRadius: %f\n',imagesizex, imagesizey,centerX,centerY,radius);
     out = 2;
     irisLabeled = [];
     totalArea = [];
     totalXCentroid = [];
     totalYCentroid = [];
+    pause()
     return
 end
 circlepixels((rowImage - centerY).^2 + (colImage - centerX).^2 <= radius^2) = 1;
@@ -46,9 +51,16 @@ thresh = 10000000;
 h(h~=0) = thresh;
 hsize = size(h);
 % fprintf('size(eye): %i x %i\n centerX: %f\n centerY: %f\n radius: %f\n hsize: %i x %i\n', ...
-%     size(eye),centerX,centerY, radius, size(h));
-eye(ceil(centerY - hsize(1)./2) : ceil(centerY + hsize(1)./2) - 1, ...
-    ceil(centerX - hsize(2)./2) : ceil(centerX + hsize(2)./2) - 1) = h;
+%      size(eye),centerX,centerY, radius, size(h));
+centerYhsize1 = ceil(centerY - hsize(1)./2);
+centerYhsize2 = ceil(centerY + hsize(1)./2) - 1;
+
+if centerYhsize1 <= 0
+    absCenterY = abs(centerYhsize1);
+    centerYhsize1 = 1;
+    centerYhsize2 = centerYhsize2 + absCenterY + 1;
+end
+eye(centerYhsize1 : centerYhsize2, ceil(centerX - hsize(2)./2) : ceil(centerX + hsize(2)./2) - 1) = h;
 eye2 = eye;
 eye2(eye == 255) = 255;
 mask = eye2;
@@ -56,11 +68,11 @@ mask(eye ~= 255) = 0;
 eyeImage(mask == 0) = 150;
 
 if debug == true
-    figure(60)
+    figure(35)
     imshow(eyeImage);
     axis on
     set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
-    pause()
+    pause(5)
 end
 
 eye = eyeImage;
@@ -72,6 +84,7 @@ eye = eyeImage;
 
     %set minIntensity to intensity of darkest pixel in frame
     minIntensity = min(eye(:));
+    fprintf('minIntensity: %f\n',minIntensity);
     %set irisIsolated to true for all pixels in frame within
     %pupilIntensityThreshold of minIntensity
     irisIsolated1 = eye <= minIntensity + pupilIntensityThreshold;
@@ -88,7 +101,7 @@ eye = eyeImage;
     irisIsolated = imdilate(imerode(imerode(irisIsolated,erodeDilateElement),erodeDilateElement),erodeDilateElement);
     
     if debug == true
-        figure(30)
+        figure(40)
         subplot(1,3,1)
         imshow(irisIsolated1);
         subplot(1,3,2)
@@ -106,9 +119,19 @@ eye = eyeImage;
     numberOfBlobs = size(blobMeasurements, 1);
     boundaries = bwboundaries(irisIsolated);
     numberOfBoundaries = size(boundaries, 1);
+
+    if numberOfBlobs == 0
+        fprintf('No blobs found.\n');
+        out = 0;
+        irisLabeled = [];
+        totalArea = [];
+        totalXCentroid = [];
+        totalYCentroid = [];
+        return
+    end
     
     if debug == true  
-        figure(20)
+        figure(45)
         subplot(2,1,1)
         imshow(irisIsolated)
         hold on
@@ -133,13 +156,14 @@ eye = eyeImage;
         blobCentroid = blobMeasurements(k).Centroid;        	% Get centroid one at a time
         blobECD(k) = sqrt(4 * blobArea / pi);					% Compute ECD - Equivalent Circular Diameter.
         blobEccentricity = blobMeasurements(k).Eccentricity; % Get ecentricity.
-        %if debug == false
+        %if debug == true
             fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f %8.1f\n',...
                 k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k),blobEccentricity);
         %end
     end
     
     %% Isolate blobs we care about
+    
     allBlobAreas = [blobMeasurements.Area];
     allowableAreaIndexes = allBlobAreas > 1250 & allBlobAreas < 1384440; % Take the larger objects (but not the ones that are the entire frame)
 
@@ -149,6 +173,16 @@ eye = eyeImage;
     allowableXIndexes = (centroidsX >= 500) & (centroidsX <= 1100); % Take centered objects
     allowableYIndexes = (centroidsY <= 725);                        % Don't want blobs too close to bottom (bc they're probs eyelashes) 
 
+    % if smaller blobs (1000 pixels) are really close to each other (like a
+    % bigger blob getting broken up by eyelashes), use different indexes
+    %altAreas = allBlobAreas > 1000 & allBlobAreas < 1500;
+    if sum(allBlobAreas > 1000 & allBlobAreas < 1500) > 1 && sum(allowableXIndexes) > 1 && sum(allowableYIndexes) > 1
+        if diff(centroidsX) < 7.5 | diff(centroidsY) < 7.5
+            fprintf('Allowing smaller blobs\n');
+            allowableAreaIndexes = allBlobAreas > 1000 & allBlobAreas < 1384440;
+        end
+    end
+    
     keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes);
     % Extract only those blobs that meet our criteria, and
     % eliminate those blobs that don't meet our criteria.
@@ -159,7 +193,7 @@ eye = eyeImage;
     irisLabeled = bwlabel(keeperBlobsImage, 8);     % Label each blob so we can make measurements of it
     
     if debug == true
-        figure(20)
+        figure(45)
         subplot(2,1,2)
         imshow(irisLabeled, []);
         hold on;
@@ -171,7 +205,7 @@ eye = eyeImage;
         end
         hold off;
         title('After')
-        pause()
+        pause(5)
     end
 
     newBlobMeasurements = regionprops(irisLabeled, eye, 'all');
@@ -196,7 +230,7 @@ eye = eyeImage;
         keeperBlobsImage = ismember(irisLabeled, keeperIndexes);
         irisLabeled = bwlabel(keeperBlobsImage, 8);
         if debug == true
-            figure(20)
+            figure(45)
             subplot(2,1,2)
             imshow(irisLabeled, []);
             hold on;
@@ -208,7 +242,7 @@ eye = eyeImage;
             end
             hold off;
             title('After')
-            pause()
+            pause(5)
         end
         newBlobMeasurements = regionprops(irisLabeled, eye, 'all');
         newNumberOfBlobs = size(newBlobMeasurements, 1);
@@ -219,7 +253,7 @@ eye = eyeImage;
     %% Classify blink
     
     if newNumberOfBlobs == 0
-        fprintf('No blob found\n');
+        fprintf('No blobs found\n');
         out = 0;
         totalArea = [];
         totalXCentroid = [];
@@ -232,13 +266,19 @@ eye = eyeImage;
     totalArea = sum(newAllBlobAreas);
     newAllBlobCentroids = [newBlobMeasurements.Centroid];
     newCentroidsX = newAllBlobCentroids(1:2:end-1);
-    fprintf('X Centroids: %f\n',newCentroidsX);
+    if debug == true
+        fprintf('X Centroids: %f\n',newCentroidsX);
+    end
     newCentroidsY = newAllBlobCentroids(2:2:end);
     totalXCentroid = mean(newCentroidsX);
     totalYCentroid = mean(newCentroidsY);
     newMeanGL = [newBlobMeasurements.MeanIntensity];
-    if numel(newMeanGL) > 1
-        newMeanGL = mean(newMeanGL(:));
+    
+    % weight centroids and gray levels with respect to area of blobs
+    if newNumberOfBlobs > 1
+        totalXCentroid = sum((newCentroidsX.*newAllBlobAreas)/totalArea);
+        totalYCentroid = sum((newCentroidsY.*newAllBlobAreas)/totalArea);
+        newMeanGL = sum((newMeanGL.*newAllBlobAreas)/totalArea);
     end
     if isempty(newMeanGL) == false
        GLRatio = initialMeanGL / newMeanGL;
@@ -263,7 +303,7 @@ eye = eyeImage;
             %   initial frame
             centroidMovement = (totalXCentroid - initialXCentroid)^2 + (totalYCentroid - initialYCentroid)^2;
             if centroidMovement < irisMovementThreshold^2
-                fprintf('Centroid moved %f pixels\n',centroidMovement)
+                %fprintf('Centroid moved %f pixels\n',centroidMovement)
                 % Blob must meet a minimum gray level to qualify as iris
                 if GLRatio >= 0.2
                     out = 1;
@@ -276,7 +316,7 @@ eye = eyeImage;
                 end
             %   If the pupil has exceeded the movement threshold, delete frame
             else
-                fprintf('Centroid moved %f pixels\n',centroidMovement)
+                fprintf('Centroid moved too far - %f pixels\n',centroidMovement)
                 out = 0;
                 fprintf('full\n');
                 return
@@ -293,10 +333,13 @@ eye = eyeImage;
         fprintf('full\n');
         return
     end
+    if debug == true
+        pause()
+    end
 
 %% Other Figures
 
-%     figure(80)
+%     figure(65)
 %     imshow(irisLabeled)
 %     hold on
 %     scatter(totalXCentroid,totalYCentroid,'ro')

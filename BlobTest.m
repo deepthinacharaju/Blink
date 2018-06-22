@@ -1,15 +1,15 @@
 % Uses IrisDetector.m and AltGenerateBlinkVideos.m to determine full and
 % partial blinks and print them to a CSV file
 
-%clf; clear all; close all;
+clear all; close all;
 debug = true;
 
 start = tic;
 
-% generates blink videos from an entire patient video
 %filepath = 'C:\Users\esimons\Dropbox (Blur PD)\sam_partial_blinks\NEWPARTIALBLINK'; % change to actual location
 filepath = 'C:\Users\esimons\Documents\MATLAB\Test';
 
+% generates blink videos from an entire patient video
 %[blinkFrameList,firstframe,allmeanGray] = AltGenerateBlinkVideos(filepath); %generates videos for each blink
 
 fileList = dir([filepath,'\*.avi']);
@@ -54,10 +54,10 @@ for fileNo = 1:size(fileList,1);
             % Find iris when eye is open
             if meanGray == eyeOpenValue && counter == 1
                 [initialEye,initialArea,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL] = initialIris(eye1,fileList,fileNo);
+                fprintf('Initial Area: %f\n',initialArea);
                 counter = counter + 1;
             end
         end
-        figcount = 0;        
         
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
         while hasFrame(clip)
@@ -67,6 +67,9 @@ for fileNo = 1:size(fileList,1);
             %se = strel('line',15,175);
             %se = strel('disk',10);
             %eye1 = imopen(eye1,se);
+%             figure(70)
+%             imshow(eye1);
+%             pause()
 
             % Look at fullest blink and determine if iris is in same place
             if meanGray == max(allmeanGray(:))
@@ -115,9 +118,9 @@ for fileNo = 1:size(fileList,1);
             eye = readFrame(clip);
             eye1 = rgb2gray(eye);
             meanGray = mean(eye1(:));
-            if meanGray >= max(allmeanGray(:))-0.01*max(allmeanGray(:)) && ...
-                    meanGray <= max(allmeanGray(:))+0.01*max(allmeanGray(:)) && ...
-                    meanGray ~= max(allmeanGray(:))
+            if meanGray >= max(allmeanGray(:))-0.025*max(allmeanGray(:)) && ...
+                    meanGray <= max(allmeanGray(:))+0.025*max(allmeanGray(:)) && ...
+                    meanGray ~= max(allmeanGray(:)) % previously 1%, now 2.5%
                 fprintf('Found frame with comparable gray levels, frame %i\n',altFrameCounter);
                 %eye1 = imsharpen(eye1);
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
@@ -164,12 +167,15 @@ for fileNo = 1:size(fileList,1);
             end
             c{fileNo, 3} = 'Full';
             toc
-        else
+        elseif out == 1
             fprintf('Partial Blink\n')
             c{fileNo, 3} = 'Partial';
             toc
+        else
+            fprintf('Error\n')
+            c{fileNo, 3} = 'Error';
+            toc
         end
-
         fprintf('\n')
     end
     
