@@ -7,8 +7,8 @@ fontSize = 14;
 frameBuffer = 10;
 numberOfFrames = obj.NumberOfFrames;            
 numberOfFramesWritten = 0;
-% figure(1)
 meanGrayLevels = zeros(numberOfFrames, 1);
+debug = true;
 
 %% Find mean gray levels of each frame
 for frame = 1 : numberOfFrames
@@ -55,25 +55,27 @@ end
     min(meanGrayLevels)+.25*(max(meanGrayLevels)-min(meanGrayLevels)),'MinPeakDistance',4,'MinPeakProminence',3);
 
 blinkFrameList = zeros(numel(meanGrayLevels),1);
-holdFrame = [];
 startFrame = [];
 endFrame = [];
-figure(1)
-title('Mean Gray Levels', 'FontSize', fontSize);
-plot(meanGrayLevels, 'k-', 'LineWidth', 2);
-hold on
+if debug == true
+    figure(1)
+    title('Mean Gray Levels', 'FontSize', fontSize);
+    plot(meanGrayLevels, 'k-', 'LineWidth', 2);
+    hold on
+end
 for frame = 1 : numberOfFrames
     thisFrame = read(obj, frame);
     for k=1:1:numel(peaksTotal)
         if meanGrayLevels(frame) == peaksTotal(k) 
             %blinkFrameList stores frame with peak gray level (blink)
             blinkFrameList(frame) = true;
-            holdFrame = [holdFrame;frame];
             %fprintf('Peak at frame %d\n',frame);
-            line([frame, frame],[min(meanGrayLevels), max(meanGrayLevels)]);
+            if debug == true
+                line([frame, frame],[min(meanGrayLevels), max(meanGrayLevels)]);
+            end
             %blink video contains a few frames before and after blink
-            startFrame = [startFrame;frame - frameBuffer]; 
-            endFrame = [endFrame;frame + frameBuffer];
+            startFrame = [startFrame; frame - frameBuffer]; 
+            endFrame = [endFrame; frame + frameBuffer];
             if k~=1
                 % if two blinks are close to each other, don't want videos
                 % to capture two blinks
@@ -86,10 +88,12 @@ for frame = 1 : numberOfFrames
     end
     startFrame(startFrame<1)=1; %can't have frame less than frame one
     endFrame(endFrame>numel(blinkFrameList))=numel(blinkFrameList); %can't have frame number higher than total frames
-    hold off
-    grid on;
-    xlabel('Frame Number');
-    ylabel('Gray Level');
+    if debug == true
+        hold off
+        grid on;
+        xlabel('Frame Number');
+        ylabel('Gray Level');
+    end
 end
 
 end

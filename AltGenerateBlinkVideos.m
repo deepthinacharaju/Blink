@@ -1,4 +1,4 @@
-function [blinkFrameList,firstframe,allmeanGray] = AltGenerateBlinkVideos(filepath)
+function [blinkFrameList,firstframe] = AltGenerateBlinkVideos(filepath)
 % Uses AltBlinkDetect.m to generate individual videos for each blink
 
 fileList = dir([filepath,'\*RAW.avi']);
@@ -24,22 +24,29 @@ end
 %                 title('Mean Gray Values')
 %                 xlabel('Frame Number')
 %                 ylabel('Gray')
-%         Locate first frame with open eye
+% Locate first frame with open eye
 begin =0;
 framefind = 1;
 allmeanGray=meanGray;
 meanofall= mean(allmeanGray(:));
+
 while begin == 0
     % prevents videos that start with eyes closed from counting as a blink
     if allmeanGray(framefind) < ((max(allmeanGray)-min(allmeanGray))*.3 + min(allmeanGray))
         firstframe = framefind;
         begin = 1;
     end
-    framefind = framefind + 1;
+    if framefind > 20
+        if allmeanGray(framefind) < ((max(allmeanGray)-min(allmeanGray))*.45 + min(allmeanGray))
+            firstframe = framefind;
+            begin = 1;
+        end
+    end
     if framefind > numel(meanGray)
         fprintf('Cant locate start frame\n')
         return
     end
+    framefind = framefind + 1;
 end
 %% Writes video
     obj = VideoReader([filepath,'\',fileList(fileNo).name]);
@@ -49,21 +56,15 @@ end
     end
     [blinkFrameList,startFrame,endFrame] = AltBlinkDetect(obj,firstframe,meanofall);
     blinkNo = 1;
-    startFrame(1) = firstframe;
 
     for k=1:numel(startFrame)
-                blinkMov = mov(:,:,:,startFrame(k):endFrame(k));
-                blinkVideo = VideoWriter([filepath,'\',fileList(fileNo).name(1:end-4),'_Blink',num2str(blinkNo),'.avi'], 'Uncompressed AVI');
-                blinkVideo.FrameRate = 2;
-                open(blinkVideo)
-                writeVideo(blinkVideo, blinkMov);
-                close(blinkVideo);
-                blinkNo = blinkNo + 1;
-                if endFrame == size(blinkFrameList,1)
-                    blinkFound = 0;
-                end
-            
-        
+        blinkMov = mov(:,:,:,startFrame(k):endFrame(k));
+        blinkVideo = VideoWriter([filepath,'\',fileList(fileNo).name(1:end-4),'_Blink',num2str(blinkNo),'.avi'], 'Uncompressed AVI');
+        blinkVideo.FrameRate = 2;
+        open(blinkVideo)
+        writeVideo(blinkVideo, blinkMov);
+        close(blinkVideo);
+        blinkNo = blinkNo + 1;          
     end
 end
 end

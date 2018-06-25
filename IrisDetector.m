@@ -16,9 +16,7 @@ specularIntensity = 220;
 debug = false;
 
 %% Mask for Eye, to only look at area iris initially was
-% xPoly = [200 400 600 800 1000 1200 1400 1200 1000 800 600 400 200];
-% yPoly = [500 225 100 100 100  225 500  780  780  790 780 700 500];
-% BW = poly2mask(xPoly,yPoly,832/2,1664/2);
+
 eyeImage = eye;
 imagesizex = size(eye,2);
 imagesizey = size(eye,1);
@@ -79,8 +77,6 @@ eye = eyeImage;
 
     
 %% Find blobs
-%     croppedEye = imcrop(eye,[200 1 1200 832]);
-%     eye = croppedEye;
 
     %set minIntensity to intensity of darkest pixel in frame
     minIntensity = min(eye(:));
@@ -157,7 +153,7 @@ eye = eyeImage;
         blobECD(k) = sqrt(4 * blobArea / pi);					% Compute ECD - Equivalent Circular Diameter.
         blobEccentricity = blobMeasurements(k).Eccentricity; % Get ecentricity.
         %if debug == true
-            fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f %8.1f\n',...
+            fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f %8.3f\n',...
                 k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k),blobEccentricity);
         %end
     end
@@ -166,24 +162,35 @@ eye = eyeImage;
     
     allBlobAreas = [blobMeasurements.Area];
     allowableAreaIndexes = allBlobAreas > 1250 & allBlobAreas < 1384440; % Take the larger objects (but not the ones that are the entire frame)
-
     allBlobCentroids = [blobMeasurements.Centroid];
     centroidsX = allBlobCentroids(1:2:end-1);
     centroidsY = allBlobCentroids(2:2:end);
     allowableXIndexes = (centroidsX >= 500) & (centroidsX <= 1100); % Take centered objects
-    allowableYIndexes = (centroidsY <= 725);                        % Don't want blobs too close to bottom (bc they're probs eyelashes) 
-
+    allowableYIndexes = (centroidsY <= 725) & (centroidsY >= 100);  % Don't want blobs too close to bottom (bc they're probs eyelashes) 
+    allMeanGL = [blobMeasurements.MeanIntensity];
+    allowableGL = allMeanGL < 60;
+    allEccentricity = [blobMeasurements.Eccentricity];
+    allowableEcc = allEccentricity < 0.997;
+    
     % if smaller blobs (1000 pixels) are really close to each other (like a
     % bigger blob getting broken up by eyelashes), use different indexes
     %altAreas = allBlobAreas > 1000 & allBlobAreas < 1500;
-    if sum(allBlobAreas > 1000 & allBlobAreas < 1500) > 1 && sum(allowableXIndexes) > 1 && sum(allowableYIndexes) > 1
-        if diff(centroidsX) < 7.5 | diff(centroidsY) < 7.5
+    if sum(allBlobAreas > 1000 & allBlobAreas < 2250) > 1 && sum(allowableXIndexes) > 1 && sum(allowableYIndexes) > 1
+        if diff(centroidsX) < 8 | diff(centroidsY) < 8 %previously 7.5
             fprintf('Allowing smaller blobs\n');
             allowableAreaIndexes = allBlobAreas > 1000 & allBlobAreas < 1384440;
         end
     end
     
-    keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes);
+    keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes & allowableEcc);
+
+    % isolate darkest blobs, if multiple blobs
+    if numberOfBlobs > 1 && sum(allowableGL) >= 1
+        fprintf('Isoalting dark blob(s)\n');
+        keeperIndexes = find(allowableAreaIndexes & allowableXIndexes ...
+            & allowableYIndexes & allowableEcc & allowableGL);
+    end  
+    
     % Extract only those blobs that meet our criteria, and
     % eliminate those blobs that don't meet our criteria.
     % Note how we use ismember() to do this.  Result will be an image - 
@@ -208,25 +215,36 @@ eye = eyeImage;
         pause(5)
     end
 
+    % new properties
     newBlobMeasurements = regionprops(irisLabeled, eye, 'all');
     newNumberOfBlobs = size(newBlobMeasurements, 1);
+    allBlobAreas = [newBlobMeasurements.Area];
+    allBlobCentroids = [newBlobMeasurements.Centroid];
+    centroidsX = allBlobCentroids(1:2:end-1);
+    centroidsY = allBlobCentroids(2:2:end);
+    allMeanGL = [newBlobMeasurements.MeanIntensity];
+    smallGL = allMeanGL < 60;  
+    allEccentricity = [newBlobMeasurements.Eccentricity];
     
     % If more than two blobs, make requirements stricter (bigger blobs,
     % closer to previous centroid)
-    
     areaThresh = 250;
     centerThresh = 50;
     loopCount = 0;
-    while newNumberOfBlobs > 2
-        allBlobAreas = [newBlobMeasurements.Area];
-        allowableAreaIndexes = allBlobAreas > 2250 + loopCount*areaThresh & allBlobAreas < 1384440;
-        allBlobCentroids = [newBlobMeasurements.Centroid];
-        centroidsX = allBlobCentroids(1:2:end-1);
-        centroidsY = allBlobCentroids(2:2:end);
+    while newNumberOfBlobs > 2 && loopCount < 5
+        allowableAreaIndexes = allBlobAreas > 2250 + loopCount*areaThresh & allBlobAreas < 1384440; % prev > 2250
         allowableXIndexes = (centroidsX >= 600 + loopCount*centerThresh) & ...
             (centroidsX <= 1000 - loopCount*centerThresh);
-        allowableYIndexes = (centroidsY <= 700 - loopCount*centerThresh);     
-        keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes);
+        allowableYIndexes = (centroidsY <= 700 - loopCount*centerThresh) & ...
+            (centroidsY >= 100 + loopCount*centerThresh);
+        allowableEcc = allEccentricity < .998;
+        keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes & allowableEcc);
+        % isolate dark blobs if present
+        if sum(smallGL) >= 1
+            allowableGL = allMeanGL < 60;
+            keeperIndexes = find(allowableAreaIndexes & allowableXIndexes ...
+                & allowableYIndexes & allowableEcc & allowableGL);
+        end
         keeperBlobsImage = ismember(irisLabeled, keeperIndexes);
         irisLabeled = bwlabel(keeperBlobsImage, 8);
         if debug == true
@@ -270,8 +288,6 @@ eye = eyeImage;
         fprintf('X Centroids: %f\n',newCentroidsX);
     end
     newCentroidsY = newAllBlobCentroids(2:2:end);
-    totalXCentroid = mean(newCentroidsX);
-    totalYCentroid = mean(newCentroidsY);
     newMeanGL = [newBlobMeasurements.MeanIntensity];
     
     % weight centroids and gray levels with respect to area of blobs
@@ -279,6 +295,9 @@ eye = eyeImage;
         totalXCentroid = sum((newCentroidsX.*newAllBlobAreas)/totalArea);
         totalYCentroid = sum((newCentroidsY.*newAllBlobAreas)/totalArea);
         newMeanGL = sum((newMeanGL.*newAllBlobAreas)/totalArea);
+    else
+        totalXCentroid = newCentroidsX;
+        totalYCentroid = newCentroidsY;
     end
     if isempty(newMeanGL) == false
        GLRatio = initialMeanGL / newMeanGL;
@@ -290,7 +309,7 @@ eye = eyeImage;
     
     %if debug == true
         fprintf('New blob measurements: \n');
-        fprintf(1,'# 1 %17.1f %11.1f %17.1f % 8.1f %17.1f\n', newMeanGL, ...
+        fprintf(1,'# 1 %17.1f %11.1f %17.1f % 8.1f %17.3f\n', newMeanGL, ...
             totalArea, totalXCentroid, totalYCentroid, totalEccentricity);
         fprintf('Gray Level Ratio: %f\n',GLRatio);
     %end
@@ -298,7 +317,7 @@ eye = eyeImage;
     % Blob must be at least a certain size to qualify as iris
     if totalArea > irisSizeThreshLower
         % Blob must be generally centered in frame
-        if totalXCentroid >= 500 && totalXCentroid <= 1100 && totalYCentroid <= 700
+        if totalXCentroid >= 500 && totalXCentroid <= 1100 && totalYCentroid <= 725 % prev 700
             %   Blob cannot have moved more than irisMovementThreshold from
             %   initial frame
             centroidMovement = (totalXCentroid - initialXCentroid)^2 + (totalYCentroid - initialYCentroid)^2;

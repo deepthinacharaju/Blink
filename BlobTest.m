@@ -1,24 +1,25 @@
-% Uses IrisDetector.m and AltGenerateBlinkVideos.m to determine full and
-% partial blinks and print them to a CSV file
+% Uses initialIris.m, IrisDetector.m and AltGenerateBlinkVideos.m to 
+% determine full and partial blinks and print them to a CSV file
 
 clear all; close all;
 debug = true;
+writeVideos = false;
 
 start = tic;
 
-%filepath = 'C:\Users\esimons\Dropbox (Blur PD)\sam_partial_blinks\NEWPARTIALBLINK'; % change to actual location
-filepath = 'C:\Users\esimons\Documents\MATLAB\Test';
+filepath = 'C:\Users\esimons\Dropbox (Blur PD)\sam_partial_blinks\NEWPARTIALBLINK'; % change to correct location
+%filepath = 'C:\Users\esimons\Documents\MATLAB\Test';
 
 % generates blink videos from an entire patient video
-%[blinkFrameList,firstframe,allmeanGray] = AltGenerateBlinkVideos(filepath); %generates videos for each blink
+if writeVideos == true
+    AltGenerateBlinkVideos(filepath); %generates videos for each blink
+end
 
 fileList = dir([filepath,'\*.avi']);
-
 c = cell(numel(fileList),2);
-out = [];
+out = 2;
 out3 = 2;
-begin = 0;
-alleyesum = [];
+
 % run loop for every file (blink video) in filepath
 for fileNo = 1:size(fileList,1);
     allmeanGray = [];
@@ -29,7 +30,6 @@ for fileNo = 1:size(fileList,1);
         fprintf(fileList(fileNo).name)
         fprintf('\n')
         numframe = 0;
-        
         while hasFrame(clip)
             eye = readFrame(clip);
             eye = rgb2gray(eye);
@@ -38,6 +38,7 @@ for fileNo = 1:size(fileList,1);
         end
         
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
+            
         [eyeOpenRow,eyeOpenCol] = find(allmeanGray(:) == min(allmeanGray(:)),1);
         eyeOpenValue = allmeanGray(eyeOpenRow);
         
@@ -119,7 +120,6 @@ for fileNo = 1:size(fileList,1);
             eye1 = rgb2gray(eye);
             meanGray = mean(eye1(:));
             if meanGray >= max(allmeanGray(:))-0.025*max(allmeanGray(:)) && ...
-                    meanGray <= max(allmeanGray(:))+0.025*max(allmeanGray(:)) && ...
                     meanGray ~= max(allmeanGray(:)) % previously 1%, now 2.5%
                 fprintf('Found frame with comparable gray levels, frame %i\n',altFrameCounter);
                 %eye1 = imsharpen(eye1);

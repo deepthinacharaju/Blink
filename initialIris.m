@@ -13,15 +13,13 @@ specularIntensity = 220;
 debug = false;
 
 %% Create mask to only look for iris around eye
-    figure(50)
+    f = figure('Visible','off');
     eyeImage = eye;
     eye2 = eye;
     h_im = imshow(eye);
     e = imellipse(gca,[200 100 1250 700]);
     BW = createMask(e,h_im);
     eye2(BW==0)=150;
-    fig = gcf;
-    set(gcf,'visible','off');
     eye = eye2;
 
 %% Find blobs
@@ -38,7 +36,6 @@ debug = false;
     %add to irisIsolated frame any pixels with intensity higher than
     %specularIntensity
     irisIsolated2 = irisIsolated1 + (eye >= specularIntensity);
-    %irisIsolated2 = imcrop(irisIsolated,[300, 700, 1400, 100]);
     %fprintf('%d\n',sum(irisIsolated2(:)));
 
     %dilate irisIsolated
@@ -91,12 +88,11 @@ debug = false;
     %% Isolate blobs we care about
 
     allBlobAreas = [blobMeasurements.Area];
-  
     % Get rid of really big blobs that contain iris & eyelashes by
     % decreasing pupilIntensityThreshold
     largeBlobAreas = allBlobAreas > irisSizeThreshUpper;
     areaCount = 0;
-    while sum(largeBlobAreas(:)) > 0 && areaCount < 6
+    while sum(largeBlobAreas(:)) > 0 && areaCount < 10
         pupilIntensityThreshold = 20 - areaCount*2.5;
         irisIsolated1 = eye <= minIntensity + pupilIntensityThreshold;
         irisIsolated2 = irisIsolated1 + (eye >= specularIntensity);
@@ -145,8 +141,14 @@ debug = false;
         areaCount = areaCount + 1;
     end            
     
-    if areaCount == 6
+    if areaCount == 10
         fprintf('Error: Could not get rid of large blobs, no iris found\n');
+        initialEye = [];
+        initialArea = [];
+        initialXCentroid = [];
+        initialYCentroid = [];
+        equivDiaSq = [];
+        initialMeanGL = [];
         return
     end
     
@@ -159,7 +161,6 @@ debug = false;
     allBlobEccs = [blobMeasurements.Eccentricity];
     allowableEccs = allBlobEccs < 1;
 
-    
 %     fprintf('Area: %3.1f\n',allowableAreaIndexes);
 %     fprintf('X In: %3.1f\n',allowableXIndexes);
 %     fprintf('Y In: %3.1f\n',allowableYIndexes);
@@ -204,19 +205,6 @@ debug = false;
     initialXCentroid = mean(newCentroidsX);
     initialYCentroid = mean(newCentroidsY);
     initialMeanGL = [newBlobMeasurements.MeanIntensity];
-    
-    % weight centroids and gray levels with respect to area of blobs
-    if newNumberOfBlobs > 1
-        initialXCentroid = sum((newCentroidsX.*newAllBlobAreas)/initialArea);
-        initialYCentroid = sum((newCentroidsY.*newAllBlobAreas)/initialArea);
-        initialMeanGL = sum((initialMeanGL.*newAllBlobAreas)/initialArea);
-    end
-
-    % if blob is really, really dark, increase it a bit so the GLRatio
-    % isn't impossibly low
-    if initialMeanGL < 10
-        initialMeanGL = 10;
-    end
     newEccentricity = [newBlobMeasurements.Eccentricity];
     
     if debug == true
@@ -250,14 +238,14 @@ debug = false;
                 plot(thisBoundary(:,2), thisBoundary(:,1), 'r', 'LineWidth', 2);
             end
             hold off;
-            title(sprintf('Before Eccentricity Constrains, %s',fileList(fileNo).name'))
+            title(sprintf('Before Eccentricity Constraints, %s',fileList(fileNo).name'))
         end
-        fprintf('Isolating most circular blob\n');
         allowableAreaIndexes2 = newAllBlobAreas > 1000; % Take the larger objects
         centroidsX = newAllBlobCentroids(1:2:end-1);
         centroidsY = newAllBlobCentroids(2:2:end);
         allowableXIndexes2 = (centroidsX >= 500) & (centroidsX <= 1100); % Take centered objects
         allowableYIndexes2 = (centroidsY <= 725);
+        fprintf('Isolating most circular blob\n');
         allowableEccs2 = newEccentricity < 0.71;
         keeperIndexes2 = find(allowableAreaIndexes2 & allowableXIndexes2 & allowableYIndexes2 & allowableEccs2);
         keeperBlobsImage2 = ismember(initialEye, keeperIndexes2);
@@ -274,7 +262,7 @@ debug = false;
                 plot(thisBoundary(:,2), thisBoundary(:,1), 'r', 'LineWidth', 2);
             end
             hold off;
-            title('After, New n Improved')
+            title('After, New & Improved')
             %pause()
         end
         
@@ -290,19 +278,20 @@ debug = false;
         initialXCentroid = mean(newCentroidsX);
         initialYCentroid = mean(newCentroidsY);
         initialMeanGL = [newBlobMeasurements.MeanIntensity];
-        
-        % weight centroids and gray levels with respect to area of blobs
-        if newNumberOfBlobs > 1
-            initialXCentroid = sum((newCentroidsX.*newAllBlobAreas)/initialArea);
-            initialYCentroid = sum((newCentroidsY.*newAllBlobAreas)/initialArea);
-            initialMeanGL = sum((initialMeanGL.*newAllBlobAreas)/initialArea);
-        end
-        % if blob is really, really dark, increase it a bit so the GLRatio
-        % isn't impossibly low
-        if initialMeanGL < 10
-            initialMeanGL = 10;
-        end
         newEccentricity = [newBlobMeasurements.Eccentricity];
+    end
+    
+    % weight centroids and gray levels with respect to area of blobs
+    if newNumberOfBlobs > 1
+        initialXCentroid = sum((newCentroidsX.*newAllBlobAreas)/initialArea);
+        initialYCentroid = sum((newCentroidsY.*newAllBlobAreas)/initialArea);
+        initialMeanGL = sum((initialMeanGL.*newAllBlobAreas)/initialArea);
+    end
+
+    % if blob is really, really dark, increase it a bit so the GLRatio
+    % isn't impossibly low
+    if initialMeanGL < 10
+        initialMeanGL = 10;
     end
     
     if debug == true

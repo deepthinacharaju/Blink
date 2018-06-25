@@ -1,8 +1,8 @@
 clf;
 fontSize = 14;
 
-filepath = 'C:\Users\dnacharaju\Dropbox (Blur PD)\sam_partial_blinks\PARTIALBLINK'; % change to actual location
-vidObject = VideoReader('V0000000007_RAW.avi');           %load video
+filepath = 'C:\Users\esimons\Documents\MATLAB\Test'; % change to actual location
+vidObject = VideoReader('V0000000019_RAW.avi');           %load video
 numberOfFrames = vidObject.NumberOfFrames;                %number of frames
 vidHeight = vidObject.Height;                             %dimensions of video (832x1664)
 vidWidth = vidObject.Width;
