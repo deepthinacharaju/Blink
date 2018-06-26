@@ -13,7 +13,7 @@ irisSizeThreshUpper = 150000;
 erodeDilateElement = strel('disk',5,0);
 specularIntensity = 220;
 
-debug = true;
+debug = false;
 
 %% Mask for Eye, to only look at area iris initially was
 

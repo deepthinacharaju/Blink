@@ -7,8 +7,8 @@ writeVideos = false;
 
 start = tic;
 
-filepath = 'C:\Users\esimons\Dropbox (Blur PD)\sam_partial_blinks\NEWPARTIALBLINK'; % change to correct location
-%filepath = 'C:\Users\esimons\Documents\MATLAB\Test';
+%filepath = 'C:\Users\esimons\Dropbox (Blur PD)\sam_partial_blinks\NEWPARTIALBLINK'; % change to correct location
+filepath = 'C:\Users\esimons\Documents\MATLAB\Test';
 
 % generates blink videos from an entire patient video
 if writeVideos == true
@@ -24,7 +24,7 @@ out3 = 2;
 for fileNo = 1:size(fileList,1);
     allmeanGray = [];
     if ~strcmp(fileList(fileNo).name(end-6:end),'RAW.avi') %allows original file to be skipped
-        tic
+        %tic
         c{fileNo, 1} = fileList(fileNo).name;
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
         fprintf(fileList(fileNo).name)
@@ -48,14 +48,13 @@ for fileNo = 1:size(fileList,1);
             saturation = 10;
             eye1 = rgb2gray(eye);
             meanGray = mean(eye1(:));
-            %se = strel('line',15,175);
             se = strel('disk',10);
             eye1 = imopen(eye1,se);
             
             % Find iris when eye is open
             if meanGray == eyeOpenValue && counter == 1
                 [initialEye,initialArea,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL] = initialIris(eye1,fileList,fileNo);
-                fprintf('Initial Area: %f\n',initialArea);
+                %fprintf('Initial Area: %f\n',initialArea);
                 counter = counter + 1;
             end
         end
@@ -65,21 +64,17 @@ for fileNo = 1:size(fileList,1);
             eye = readFrame(clip);
             eye1 = rgb2gray(eye);
             meanGray = mean(eye1(:));
-            %se = strel('line',15,175);
-            %se = strel('disk',10);
-            %eye1 = imopen(eye1,se);
 %             figure(70)
 %             imshow(eye1);
 %             pause()
 
             % Look at fullest blink and determine if iris is in same place
+            
             if meanGray == max(allmeanGray(:))
-                %eye1 = imsharpen(eye1);
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
-                %eye1 = imgaussfilt(eye1,.9);
-                [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = ...
+                [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid,newMeanGL] = ...
                     IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL);
-                %counter = counter + 1;
+                fprintf(1,'Initial GL: %5.3f Final GL: %5.3f\n',initialMeanGL, newMeanGL);
                 % if we find a full blink, we don't need to look any
                 % further
                 if out == 0
@@ -119,14 +114,16 @@ for fileNo = 1:size(fileList,1);
             eye = readFrame(clip);
             eye1 = rgb2gray(eye);
             meanGray = mean(eye1(:));
+%             figure(70)
+%             imshow(eye1);
+%             pause()
             if meanGray >= max(allmeanGray(:))-0.025*max(allmeanGray(:)) && ...
                     meanGray ~= max(allmeanGray(:)) % previously 1%, now 2.5%
                 fprintf('Found frame with comparable gray levels, frame %i\n',altFrameCounter);
-                %eye1 = imsharpen(eye1);
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
-                %eye1 = imgaussfilt(eye1,.9);
-                [out3,irisLabeled,totalArea,totalXCentroid,totalYCentroid] = ...
+                [out3,irisLabeled,totalArea,totalXCentroid,totalYCentroid,newMeanGL] = ...
                     IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL);
+                fprintf(1,'Initial GL: %5.3f Final GL: %5.3f\n',initialMeanGL, newMeanGL);
                 if debug == true
                     if out3 == 1
                         figure()
@@ -157,24 +154,24 @@ for fileNo = 1:size(fileList,1);
                 altFrameCounter = altFrameCounter + 1;
             end
         end
-        
+                
         % print outcome and read to CSV file
         if out == 0 || out3 == 0
             fprintf('Full Blink\n')
-            if out3 == 0
+            if out3 == 0 && debug == true
                 fprintf('Max Gray Frame: out = %d\n',out);
                 fprintf('Other Frame: out = %d\n',out3);
             end
             c{fileNo, 3} = 'Full';
-            toc
+            %toc
         elseif out == 1
             fprintf('Partial Blink\n')
             c{fileNo, 3} = 'Partial';
-            toc
+            %toc
         else
             fprintf('Error\n')
             c{fileNo, 3} = 'Error';
-            toc
+            %toc
         end
         fprintf('\n')
     end

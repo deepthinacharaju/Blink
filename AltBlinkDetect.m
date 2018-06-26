@@ -8,7 +8,7 @@ frameBuffer = 10;
 numberOfFrames = obj.NumberOfFrames;            
 numberOfFramesWritten = 0;
 meanGrayLevels = zeros(numberOfFrames, 1);
-debug = true;
+debug = false;
 
 %% Find mean gray levels of each frame
 for frame = 1 : numberOfFrames

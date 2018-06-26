@@ -10,7 +10,7 @@ irisSizeThreshUpper = 80000;
 erodeDilateElement = strel('disk',5,0);
 specularIntensity = 220;
 
-debug = false;
+debug = true;
 
 %% Create mask to only look for iris around eye
     f = figure('Visible','off');
@@ -68,9 +68,9 @@ debug = false;
     end
 
     %% Get properties of each blob
-    %if debug == true
+    if debug == true
         fprintf('initialIris.m :\n');
-    %end
+    end
     for k = 1 : numberOfBlobs                                % Loop through all blobs.
         thisBlobsPixels = blobMeasurements(k).PixelIdxList;  % Get list of pixels in current blob.
         meanGL = blobMeasurements(k).MeanIntensity;          % Get mean of current blob
@@ -79,10 +79,10 @@ debug = false;
         blobCentroid = blobMeasurements(k).Centroid;		 % Get centroid one at a time.
         blobECD(k) = sqrt(4 * blobArea / pi);                % Compute ECD - Equivalent Circular Diameter.
         blobEccentricity = blobMeasurements(k).Eccentricity; % Get ecentricity.
-        %if debug == true
+        if debug == true
             fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f %8.1f\n',...
                 k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k),blobEccentricity);
-        %end
+        end
     end
     
     %% Isolate blobs we care about
@@ -120,9 +120,9 @@ debug = false;
             %pause()
         end
         
-        %if debug == true
+        if debug == true
             fprintf('Big blobs, running again (Attempt %i):\n',(areaCount+1));
-        %end
+        end
         for k = 1 : numberOfBlobs                                % Loop through all blobs.
             thisBlobsPixels = blobMeasurements(k).PixelIdxList;  % Get list of pixels in current blob.
             meanGL = blobMeasurements(k).MeanIntensity;          % Get mean of current blob
@@ -131,10 +131,10 @@ debug = false;
             blobCentroid = blobMeasurements(k).Centroid;		 % Get centroid one at a time.
             blobECD(k) = sqrt(4 * blobArea / pi);                % Compute ECD - Equivalent Circular Diameter.
             blobEccentricity = blobMeasurements(k).Eccentricity; % Get ecentricity.
-            %if debug == true
+            if debug == true
                 fprintf(1,'#%2d %17.1f %11.1f %8.1f %8.1f %8.1f % 8.1f %8.3f\n',...
                     k, meanGL, blobArea, blobPerimeter, blobCentroid, blobECD(k),blobEccentricity);
-            %end
+            end
         end
         allBlobAreas = [blobMeasurements.Area];
         largeBlobAreas = allBlobAreas > irisSizeThreshUpper;
@@ -224,7 +224,7 @@ debug = false;
     % if there's multiple blobs (of the correct size) but one is really 
     % circular (eccentricity less than 0.7), get rid of less circular blobs
     smallEccs = newEccentricity < 0.71;
-    fprintf('Number of Blobs with Small Eccentricities: %i\n',sum(smallEccs));
+    %fprintf('Number of Blobs with Small Eccentricities: %i\n',sum(smallEccs));
     if newNumberOfBlobs > 1 && sum(smallEccs) >= 1
         if debug == true
             figure(30)
@@ -245,7 +245,9 @@ debug = false;
         centroidsY = newAllBlobCentroids(2:2:end);
         allowableXIndexes2 = (centroidsX >= 500) & (centroidsX <= 1100); % Take centered objects
         allowableYIndexes2 = (centroidsY <= 725);
-        fprintf('Isolating most circular blob\n');
+        if debug == true
+            fprintf('Isolating most circular blob\n');
+        end
         allowableEccs2 = newEccentricity < 0.71;
         keeperIndexes2 = find(allowableAreaIndexes2 & allowableXIndexes2 & allowableYIndexes2 & allowableEccs2);
         keeperBlobsImage2 = ismember(initialEye, keeperIndexes2);
@@ -315,10 +317,10 @@ debug = false;
         fprintf('No iris-like blobs found.\n')
         return
     end
-    %if debug == true
+    if debug == true
         fprintf('New blob measurements: \n');
         fprintf(1,'# 1 %17.1f %11.1f %17.1f % 8.1f %17.3f\n', initialMeanGL, initialArea, initialXCentroid, initialYCentroid, newEccentricity);
-    %end
+    end
     if debug == true
         pause()
     end
