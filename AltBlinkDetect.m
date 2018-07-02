@@ -15,8 +15,7 @@ for frame = 1 : numberOfFrames
     % Extract the frame from the movie structure.
     thisFrame = read(obj, frame);
     if frame < firstframe
-    meanGrayLevels(frame) = meanofall;
-
+        meanGrayLevels(frame) = meanofall;
     else
     % Display it
     %  	hImage = subplot(2, 1, 1);
@@ -49,8 +48,9 @@ for frame = 1 : numberOfFrames
     end
 end
 
-%%
+%% Find peaks, start frames, and end frames
 
+% Find gray level intensity peaks
 [peaksTotal,locsTotal] = findpeaks(meanGrayLevels,'MinPeakHeight',...
     min(meanGrayLevels)+.25*(max(meanGrayLevels)-min(meanGrayLevels)),'MinPeakDistance',4,'MinPeakProminence',3);
 
@@ -97,4 +97,3 @@ for frame = 1 : numberOfFrames
 end
 
 end
-

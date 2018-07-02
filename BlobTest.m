@@ -2,13 +2,13 @@
 % determine full and partial blinks and print them to a CSV file
 
 clear all; close all;
-debug = true;
+debug = false;
 writeVideos = false;
 
 start = tic;
 
 %filepath = 'C:\Users\esimons\Dropbox (Blur PD)\sam_partial_blinks\NEWPARTIALBLINK'; % change to correct location
-filepath = 'C:\Users\esimons\Documents\MATLAB\Test';
+filepath = 'C:\Users\esimons\Documents\MATLAB\Test\All Videos Together';
 
 % generates blink videos from an entire patient video
 if writeVideos == true
@@ -30,6 +30,8 @@ for fileNo = 1:size(fileList,1);
         fprintf(fileList(fileNo).name)
         fprintf('\n')
         numframe = 0;
+        
+        % calculate gray level for each frame, store in "allmeanGray"
         while hasFrame(clip)
             eye = readFrame(clip);
             eye = rgb2gray(eye);
@@ -38,11 +40,12 @@ for fileNo = 1:size(fileList,1);
         end
         
         clip = VideoReader([filepath,'\',fileList(fileNo).name]);
-            
+        
+        % determine minimum gray level (where eye is likely open)
         [eyeOpenRow,eyeOpenCol] = find(allmeanGray(:) == min(allmeanGray(:)),1);
         eyeOpenValue = allmeanGray(eyeOpenRow);
         
-        counter = 1;       
+        counter = 1;
         while hasFrame(clip)
             eye = readFrame(clip);
             saturation = 10;
@@ -53,8 +56,7 @@ for fileNo = 1:size(fileList,1);
             
             % Find iris when eye is open
             if meanGray == eyeOpenValue && counter == 1
-                [initialEye,initialArea,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL] = initialIris(eye1,fileList,fileNo);
-                %fprintf('Initial Area: %f\n',initialArea);
+                [initialEye,initialXCentroid,initialYCentroid,equivDiaSq] = initialIris(eye1,fileList,fileNo);
                 counter = counter + 1;
             end
         end
@@ -67,14 +69,16 @@ for fileNo = 1:size(fileList,1);
 %             figure(70)
 %             imshow(eye1);
 %             pause()
-
-            % Look at fullest blink and determine if iris is in same place
             
+            % Look at fullest blink and determine if iris is in same place
             if meanGray == max(allmeanGray(:))
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
                 [out,irisLabeled,totalArea,totalXCentroid,totalYCentroid,newMeanGL] = ...
-                    IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL);
-                fprintf(1,'Initial GL: %5.3f Final GL: %5.3f\n',initialMeanGL, newMeanGL);
+                    IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq);
+                if debug == true
+                    fprintf('Intensity Ratio: %3.5f\n',newMeanGL/mean(eye1(:)));
+                end
+                %fprintf(1,'Initial GL: %5.3f Final GL: %5.3f\n',initialMeanGL, newMeanGL);
                 % if we find a full blink, we don't need to look any
                 % further
                 if out == 0
@@ -96,15 +100,15 @@ for fileNo = 1:size(fileList,1);
                         title('Blob(s) Found')
                         subplot(2,2,4)
                         fuse = imfuse(irisLabeled,eye1);
-                        imshow(fuse,RI);                        
+                        imshow(fuse,RI);
                         title('Blob(s) Overlayed on Edited Image')
                         colormap gray
                         set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
                     end
-                end    
+                end
             end
         end
-            
+        
         % if another frame has a gray level close to max level, also
         % look at that frame and see if it has a full blink
         out3 = 2;
@@ -117,13 +121,16 @@ for fileNo = 1:size(fileList,1);
 %             figure(70)
 %             imshow(eye1);
 %             pause()
-            if meanGray >= max(allmeanGray(:))-0.025*max(allmeanGray(:)) && ...
-                    meanGray ~= max(allmeanGray(:)) % previously 1%, now 2.5%
+            if meanGray >= max(allmeanGray(:))-0.03*max(allmeanGray(:)) && ...
+                    meanGray ~= max(allmeanGray(:)) % previously 1%, now 2.5% now 3%
                 fprintf('Found frame with comparable gray levels, frame %i\n',altFrameCounter);
                 eye1 = adapthisteq(eye1,'clipLimit',0.015,'Distribution','rayleigh');
                 [out3,irisLabeled,totalArea,totalXCentroid,totalYCentroid,newMeanGL] = ...
-                    IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq,initialMeanGL);
-                fprintf(1,'Initial GL: %5.3f Final GL: %5.3f\n',initialMeanGL, newMeanGL);
+                    IrisDetector(eye1,initialXCentroid,initialYCentroid,equivDiaSq);
+                if debug == true
+                    fprintf('Intensity Ratio: %3.3f\n',newMeanGL/mean(eye1(:)));
+                end
+                %fprintf(1,'Initial GL: %5.3f Final GL: %5.3f\n',initialMeanGL, newMeanGL);
                 if debug == true
                     if out3 == 1
                         figure()
@@ -146,7 +153,7 @@ for fileNo = 1:size(fileList,1);
                         set(gcf, 'units','normalized','outerposition',[0 0 1 1]);
                     end
                 end
-                % if we find a full blink in an additional high-gray level 
+                % if we find a full blink in an additional high-gray level
                 % frame, then we can call it a full blink
                 if out3 == 0
                     break
@@ -154,7 +161,7 @@ for fileNo = 1:size(fileList,1);
                 altFrameCounter = altFrameCounter + 1;
             end
         end
-                
+        
         % print outcome and read to CSV file
         if out == 0 || out3 == 0
             fprintf('Full Blink\n')
@@ -186,6 +193,6 @@ end
 % writes data to CSV file "Blinks.csv"
 T = cell2table(c,'VariableNames',{'File_Name','Blink_Type','MATLAB_Outcome'});
 writetable(T,'Blinks.csv')
+system('C:\Users\esimons\Documents\MATLAB\Blink-Classifier2\Blink\Blinks.csv');
 elapsed = toc(start);
 fprintf('Total elapsed time is %f seconds.\n',elapsed);
-system('C:\Users\esimons\Documents\MATLAB\Blink-Classifier2\Blink\Blinks.csv');
