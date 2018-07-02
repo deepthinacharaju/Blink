@@ -2,13 +2,13 @@
 % determine full and partial blinks and print them to a CSV file
 
 clear all; close all;
-debug = false;
+debug = true;
 writeVideos = false;
 
 start = tic;
 
 %filepath = 'C:\Users\esimons\Dropbox (Blur PD)\sam_partial_blinks\NEWPARTIALBLINK'; % change to correct location
-filepath = 'C:\Users\esimons\Documents\MATLAB\Test\All Videos Together';
+filepath = 'C:\Users\esimons\Documents\MATLAB\Test';
 
 % generates blink videos from an entire patient video
 if writeVideos == true

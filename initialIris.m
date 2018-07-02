@@ -279,7 +279,6 @@ if newNumberOfBlobs > 1 && sum(smallEccs) >= 1
     equivDiaSq = sqrt(4 * initialArea / pi);
     initialXCentroid = mean(newCentroidsX);
     initialYCentroid = mean(newCentroidsY);
-    %initialMeanGL = [newBlobMeasurements.MeanIntensity];
     newEccentricity = [newBlobMeasurements.Eccentricity];
 end
 
@@ -287,15 +286,8 @@ end
 if newNumberOfBlobs > 1
     initialXCentroid = sum((newCentroidsX.*newAllBlobAreas)/initialArea);
     initialYCentroid = sum((newCentroidsY.*newAllBlobAreas)/initialArea);
-    %initialMeanGL = sum((initialMeanGL.*newAllBlobAreas)/initialArea);
     newEccentricity = sum((newEccentricity.*newAllBlobAreas)/initialArea);
 end
-
-% if blob is really, really dark, increase it a bit so the GLRatio
-% isn't impossibly low (not really necessary more, can delete?)
-% if initialMeanGL < 10
-%     initialMeanGL = 10;
-% end
 
 if debug == true
     fprintf('Updated initialIris.m blobs:\n');
