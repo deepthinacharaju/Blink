@@ -66,7 +66,7 @@ eye2 = eye;
 eye2(eye == 255) = 255;
 mask = eye2;
 mask(eye ~= 255) = 0;
-eyeImage(mask == 0) = 150; % set everything that's not mask to gray (simply white seemed to mess it up)
+eyeImage(mask == 0) = 150; % set everything that's not mask to gray (plain white seemed to mess it up)
 
 if debug == true
     figure(35)
@@ -170,38 +170,38 @@ allowableAreaIndexes = allBlobAreas > 1250 & allBlobAreas < 1384440; % Take the 
 allBlobCentroids = [blobMeasurements.Centroid];
 centroidsX = allBlobCentroids(1:2:end-1);
 centroidsY = allBlobCentroids(2:2:end);
-allowableXIndexes = abs(centroidsX - initialXCentroid) <= 150;
+allowableXIndexes = abs(centroidsX - initialXCentroid) <= 150;  % Centroid is allowed to move further in y dir than x
 allowableYIndexes = abs(centroidsY - initialYCentroid) <= 215.5;
 allMeanGL = [blobMeasurements.MeanIntensity];
 allowableGL = allMeanGL < 190;                                  % Don't want really light-colored blobs
 allowablesmallGL = allMeanGL < 60;
-allEccentricity = [blobMeasurements.Eccentricity];
-allowableEcc = allEccentricity < 0.9957; % prev .9957            % Basically all blobs that aren't straight lines
+%allEccentricity = [blobMeasurements.Eccentricity];
+%allowableEcc = allEccentricity < 0.9957; % prev .9957            % Basically all blobs that aren't straight lines
 
 % if smaller blobs (1000 pixels) make up more than half of the blobs and
 % are really close to each other (like a bigger blob getting broken up 
-% by eyelashes), use different area index
-numSmallBlobs = sum(allBlobAreas > 1000 & allBlobAreas < 2250);
+% by eyelashes), use different area index to allow them
+%numSmallBlobs = sum(allBlobAreas > 1000 & allBlobAreas < 2250);
 
-if numSmallBlobs > 1 && numberOfBlobs/numSmallBlobs < 2 % && sum(allowableXIndexes) > 1 && sum(allowableYIndexes) > 1
-    if sum(abs(diff(centroidsX)) < 8) >= 1 || sum(abs(diff(centroidsY)) < 8) >= 1 %previously 7.5, prev |
-        if debug == true
-            fprintf('Allowing smaller blobs\n');
-        end
-        allowableAreaIndexes = allBlobAreas > 1000 & allBlobAreas < 1384440;
-    end
-end
+% if numSmallBlobs > 1 && numberOfBlobs/numSmallBlobs < 2 % && sum(allowableXIndexes) > 1 && sum(allowableYIndexes) > 1
+%     if sum(abs(diff(centroidsX)) < 8) >= 1 || sum(abs(diff(centroidsY)) < 8) >= 1 %previously 7.5, prev |
+%         if debug == true
+%             fprintf('Allowing smaller blobs\n');
+%         end
+%         allowableAreaIndexes = allBlobAreas > 1000 & allBlobAreas < 1384440;
+%     end
+% end
 
-keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes & allowableEcc & allowableGL);
+keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes & allowableGL);
 
 % isolate darkest blobs, if multiple blobs
-if numberOfBlobs > 1 && sum(allowablesmallGL) >= 1
-    if debug == true
-        fprintf('Isoalting dark blob(s)\n');
-    end
-    keeperIndexes = find(allowableAreaIndexes & allowableXIndexes ...
-        & allowableYIndexes & allowableEcc & allowablesmallGL);
-end
+% if numberOfBlobs > 1 && sum(allowablesmallGL) >= 1
+%     if debug == true
+%         fprintf('Isoalting dark blob(s)\n');
+%     end
+%     keeperIndexes = find(allowableAreaIndexes & allowableXIndexes ...
+%         & allowableYIndexes & allowableEcc & allowablesmallGL);
+% end
 
 % Extract only those blobs that meet our criteria, and
 % eliminate those blobs that don't meet our criteria.
@@ -237,7 +237,7 @@ centroidsY = allBlobCentroids(2:2:end);
 allMeanGL = [newBlobMeasurements.MeanIntensity];
 allowableGL = allMeanGL < 190;
 smallGL = allMeanGL < 60;
-allEccentricity = [newBlobMeasurements.Eccentricity];
+%allEccentricity = [newBlobMeasurements.Eccentricity];
 
 % If more than two blobs, make requirements stricter (bigger blobs,
 % closer to previous centroid, darker)
@@ -248,29 +248,30 @@ while newNumberOfBlobs > 2 && loopCount < 5
     if debug == true
         fprintf('Reducing number of blobs, attempt %i.\n %i blobs left.\n',loopCount+1,newNumberOfBlobs);
     end
-    % requirements become stricter with each trip through the loop
+    % requirements become stricter with each trip through the loop (except
+    % eccentricity)
     allowableAreaIndexes = allBlobAreas > 2250 + loopCount*areaThresh & allBlobAreas < 1384440;
     allowableXIndexes = abs(centroidsX - initialXCentroid) <= 125 - loopCount*centerThresh;
     allowableYIndexes = abs(centroidsY - initialYCentroid) <= 215 - loopCount*centerThresh;
-    allowableEcc = allEccentricity < .9957; % prev .9957
+    %allowableEcc = allEccentricity < .9957; % prev .9957
     
     % if smaller blobs (1000 pixels) are really close to each other (like a
     % bigger blob getting broken up by eyelashes), use different area index
-    if sum(allBlobAreas > 1000 & allBlobAreas < 2250) > 1 && sum(allowableXIndexes) > 1 && sum(allowableYIndexes) > 1
-        if sum(abs(diff(centroidsX)) < 8) >= 1 | sum(abs(diff(centroidsY)) < 8) >= 1 %previously 7.5
-            if debug == true
-                fprintf('Allowing smaller blobs\n');
-            end
-            allowableAreaIndexes = allBlobAreas > 1000 + loopCount*areaThresh & allBlobAreas < 1384440;
-        end
-    end
+%     if sum(allBlobAreas > 1000 & allBlobAreas < 2250) > 1 && sum(allowableXIndexes) > 1 && sum(allowableYIndexes) > 1
+%         if sum(abs(diff(centroidsX)) < 8) >= 1 | sum(abs(diff(centroidsY)) < 8) >= 1 %previously 7.5
+%             if debug == true
+%                 fprintf('Allowing smaller blobs\n');
+%             end
+%             allowableAreaIndexes = allBlobAreas > 1000 + loopCount*areaThresh & allBlobAreas < 1384440;
+%         end
+%     end
     
     % isolate dark blobs if present
-    if sum(smallGL) >= 1
-        allowableGL = allMeanGL < 60;
-    end
+%     if sum(smallGL) >= 1
+%         allowableGL = allMeanGL < 60;
+%     end
     
-    keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes & allowableEcc & allowableGL);
+    keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes & allowableGL);
     keeperBlobsImage = ismember(irisLabeled, keeperIndexes);
     irisLabeled = bwlabel(keeperBlobsImage, 8);
     if debug == true
@@ -293,7 +294,7 @@ while newNumberOfBlobs > 2 && loopCount < 5
     loopCount = loopCount + 1;
 end
 
-%% Isoalte blobs further
+%% Recharacterize blobs
 
 if newNumberOfBlobs == 0
     fprintf('No blobs found\n');
@@ -318,14 +319,14 @@ if debug == true
 end
 newCentroidsY = newAllBlobCentroids(2:2:end);
 newMeanGL = [newBlobMeasurements.MeanIntensity];
-totalEccentricity = [newBlobMeasurements.Eccentricity];
+%totalEccentricity = [newBlobMeasurements.Eccentricity];
 
 % weight centroids, gray levels, and eccentricities with respect to area of blobs
 if newNumberOfBlobs > 1
     totalXCentroid = sum((newCentroidsX.*newAllBlobAreas)/totalArea);
     totalYCentroid = sum((newCentroidsY.*newAllBlobAreas)/totalArea);
     newMeanGL = sum((newMeanGL.*newAllBlobAreas)/totalArea);
-    totalEccentricity = sum((totalEccentricity.*newAllBlobAreas)/totalArea);
+    %totalEccentricity = sum((totalEccentricity.*newAllBlobAreas)/totalArea);
 else
     totalXCentroid = newCentroidsX;
     totalYCentroid = newCentroidsY;
@@ -333,8 +334,8 @@ end
 
 if debug == true
     fprintf('New blob measurements: \n');
-    fprintf(1,'# 1 %17.1f %11.1f %17.1f % 8.1f %17.5f\n', newMeanGL, ...
-        totalArea, totalXCentroid, totalYCentroid, totalEccentricity);
+    fprintf(1,'# 1 %17.1f %11.1f %17.1f % 8.1f\n', newMeanGL, ...
+        totalArea, totalXCentroid, totalYCentroid);
 end
 
 %% Classify blinks
@@ -343,10 +344,10 @@ end
 if totalArea > irisSizeThreshLower
         %   Blob centroid cannot too far in X or Y directions from initial
         %   blob centroid
-        movementX = abs(totalXCentroid - initialXCentroid);
-        movementY = abs(totalYCentroid - initialYCentroid);
-        if movementX < movementThresholdX
-            if movementY < movementThresholdY
+%         movementX = abs(totalXCentroid - initialXCentroid);
+%         movementY = abs(totalYCentroid - initialYCentroid);
+%         if movementX < movementThresholdX
+%             if movementY < movementThresholdY
                 if newMeanGL / mean(origEye(:)) < 0.5607 % prev .561
                     out = 1;
                     fprintf('gray level intensity: %3.5f\n',newMeanGL/mean(origEye(:)));
@@ -357,18 +358,18 @@ if totalArea > irisSizeThreshLower
                     fprintf('full\n');
                     return
                 end
-            else
-                fprintf('Blob moved too far in y direction - %3.5f pixels\n',movementY);
-                out = 0;
-                fprintf('full\n');
-                return
-            end
-        else
-            fprintf('Blob moved too far in x direction - %3.5f pixels\n',movementX);
-            out = 0;
-            fprintf('full\n');
-            return
-        end
+%             else
+%                 fprintf('Blob moved too far in y direction - %3.5f pixels\n',movementY);
+%                 out = 0;
+%                 fprintf('full\n');
+%                 return
+%             end
+%         else
+%             fprintf('Blob moved too far in x direction - %3.5f pixels\n',movementX);
+%             out = 0;
+%             fprintf('full\n');
+%             return
+%         end
 else
     fprintf('Blob not correct size\n');
     out = 0;

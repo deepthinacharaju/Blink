@@ -88,6 +88,7 @@ end
 %% Isolate blobs we care about
 
 allBlobAreas = [blobMeasurements.Area];
+
 % Get rid of really big blobs that contain iris & eyelashes by
 % decreasing pupilIntensityThreshold, finding new blobs
 largeBlobAreas = allBlobAreas > irisSizeThreshUpper;
@@ -159,14 +160,14 @@ centroidsY = allBlobCentroids(2:2:end);
 allowableXIndexes = (centroidsX >= 500) & (centroidsX <= 1100); % Take centered objects
 allowableYIndexes = (centroidsY <= 725); % Don't want blobs too close to bottom (bc they're probs eyelashes)
 allBlobEccs = [blobMeasurements.Eccentricity];
-allowableEccs = allBlobEccs < 1;
+%allowableEccs = allBlobEccs < 1;
 
 %     fprintf('Area: %3.1f\n',allowableAreaIndexes);
 %     fprintf('X In: %3.1f\n',allowableXIndexes);
 %     fprintf('Y In: %3.1f\n',allowableYIndexes);
 %     fprintf('Eccs: %3.1f\n',allowableEccs);
 
-keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes & allowableEccs);
+keeperIndexes = find(allowableAreaIndexes & allowableXIndexes & allowableYIndexes); % & allowableEccs);
 %     fprintf('keeperIndexes: %f\n',keeperIndexes);
 % Extract only those blobs that meet our criteria, and
 % eliminate those blobs that don't meet our criteria.
@@ -308,7 +309,7 @@ if initialArea == 0
 end
 if debug == true
     fprintf('New blob measurements: \n');
-    fprintf(1,'# 1 %17.1f %11.1f %17.1f % 8.1f %17.3f\n', initialMeanGL, initialArea, initialXCentroid, initialYCentroid, newEccentricity);
+    fprintf(1,'# 1 %11.1f %17.1f % 8.1f %17.3f\n', initialArea, initialXCentroid, initialYCentroid, newEccentricity);
 end
 if debug == true
     pause()

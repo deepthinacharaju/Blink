@@ -2,7 +2,7 @@
 % determine full and partial blinks and print them to a CSV file
 
 clear all; close all;
-debug = true;
+debug = false;
 writeVideos = false;
 
 start = tic;

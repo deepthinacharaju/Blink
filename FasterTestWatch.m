@@ -15,7 +15,7 @@ for frame = 1 : numberOfFrames
   thisFrame = read(vidObject, frame);
     
     % Display it
-   hImage = subplot(2, 1, 1);
+  hImage = subplot(2, 1, 1);
   image(thisFrame);
   caption = sprintf('Frame %4d of %d.', frame, numberOfFrames);
   title(caption, 'FontSize', fontSize);
